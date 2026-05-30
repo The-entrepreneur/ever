@@ -95,4 +95,16 @@ echo -e "   sudo ln -sf ${NGINX_CONF} /etc/nginx/sites-enabled/"
 echo -e "   sudo systemctl reload nginx"
 echo -e "\n5. Obtain Let's Encrypt Certificate:"
 echo -e "   sudo certbot --nginx -d ${SLUG}.youragency.com"
+echo -e "\n6. Import n8n workflow:"
+echo -e "   docker exec -it n8n_${SLUG} n8n import:workflow \\"
+if [ "$PACKAGE" == "level1" ]; then
+    echo -e "     --input=/home/node/.n8n/workflows/level1.json"
+else
+    echo -e "     --input=/home/node/.n8n/workflows/level2.json"
+fi
+echo -e "\n7. Activate workflow in n8n UI (toggle On)"
+echo -e "\n8. Test webhook:"
+echo -e "   curl -X POST https://${SLUG}.youragency.com/webhook/hotel-chatbot \\"
+echo -e "     -H 'Content-Type: application/json' \\"
+echo -e "     -d '{\"session_id\":\"test\",\"message\":\"Hello\",\"channel\":\"website_widget\"}'"
 echo -e "─────────────────────────────────────────────────────────────"

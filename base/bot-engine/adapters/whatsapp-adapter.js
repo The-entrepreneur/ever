@@ -119,4 +119,32 @@ const sendQuickReply = async (to, bodyText, buttons) => {
   return twilioSend(to, `${bodyText}\n\nReply: ${buttons.join(' / ')}`);
 };
 
-module.exports = { sendMessage, sendQuickReply };
+const pauseSession = async (remoteJid) => {
+  const provider = (process.env.WHATSAPP_PROVIDER || 'twilio').toLowerCase();
+  if (provider !== 'evolution') return;
+  const baseUrl  = process.env.EVOLUTION_API_URL;
+  const apiKey   = process.env.EVOLUTION_API_KEY;
+  const instance = process.env.EVOLUTION_INSTANCE;
+
+  await fetch(`${baseUrl}/chat/pauseWebhook/${instance}`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
+    body:    JSON.stringify({ remoteJid, pause: true }),
+  });
+};
+
+const resumeSession = async (remoteJid) => {
+  const provider = (process.env.WHATSAPP_PROVIDER || 'twilio').toLowerCase();
+  if (provider !== 'evolution') return;
+  const baseUrl  = process.env.EVOLUTION_API_URL;
+  const apiKey   = process.env.EVOLUTION_API_KEY;
+  const instance = process.env.EVOLUTION_INSTANCE;
+
+  await fetch(`${baseUrl}/chat/pauseWebhook/${instance}`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
+    body:    JSON.stringify({ remoteJid, pause: false }),
+  });
+};
+
+module.exports = { sendMessage, sendQuickReply, pauseSession, resumeSession };
