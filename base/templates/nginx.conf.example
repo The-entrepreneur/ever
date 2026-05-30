@@ -1,0 +1,26 @@
+# ─────────────────────────────────────────────────────────────
+# Nginx config template — one file per client
+# Replace CLIENT_SLUG and CLIENT_PORT before deploying
+# Generated automatically by new-client.sh
+# ─────────────────────────────────────────────────────────────
+
+server {
+    listen 80;
+    server_name CLIENT_SLUG.youragency.com;
+
+    location / {
+        proxy_pass http://localhost:CLIENT_PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+    }
+}
+# After creating this config, run:
+# certbot --nginx -d CLIENT_SLUG.youragency.com

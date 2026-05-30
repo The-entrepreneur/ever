@@ -1,0 +1,5 @@
+[
+  { "id": "rm_std",    "type": "Standard", "rate": 89,  "capacity": 2, "available": true },
+  { "id": "rm_dlx",    "type": "Deluxe",   "rate": 129, "capacity": 2, "available": true },
+  { "id": "rm_suite",  "type": "Suite",    "rate": 199, "capacity": 4, "available": true }
+]

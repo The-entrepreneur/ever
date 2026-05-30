@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────
+# .gitignore — ever_agent_core monorepo
+# ─────────────────────────────────────────────────────────────
+
+# Node dependencies — never commit these
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# Client env files — contain real secrets
+clients/*/.env
+clients/*/.env.*
+
+# Client credentials — Google service accounts, certs, keys
+clients/*/credentials/
+credentials/
+*.pem
+*.key
+*.p12
+
+# Client data (generated per deployment — not templates)
+# Keep: base/templates/*.json.example
+# Ignore: clients/*/data/*.xlsx  clients/*/data/*.pdf
+clients/*/data/*.xlsx
+clients/*/data/*.pdf
+
+# Logs
+*.log
+logs/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build outputs / temp files
+dist/
+.tmp/
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+
+# Keep these JSON files — they are source, not secrets
+!base/n8n-workflows/level1.json
+!base/templates/faq.json.example
+!base/templates/rooms.json.example

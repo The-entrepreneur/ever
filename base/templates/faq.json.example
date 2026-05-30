@@ -1,0 +1,12 @@
+{
+  "checkin":   { "keywords": ["check in","checkin","arrive"],      "answer": "Check-in from 2:00 PM." },
+  "checkout":  { "keywords": ["check out","checkout","leave"],     "answer": "Check-out by 11:00 AM." },
+  "wifi":      { "keywords": ["wifi","internet","password"],       "answer": "Free WiFi throughout. Ask reception for password." },
+  "parking":   { "keywords": ["park","car","parking"],             "answer": "Parking at £10/night. Inform us in advance." },
+  "pool":      { "keywords": ["pool","swim"],                      "answer": "Pool open 6 AM to 10 PM daily." },
+  "gym":       { "keywords": ["gym","fitness","workout"],          "answer": "Gym open 24 hours for guests." },
+  "breakfast": { "keywords": ["breakfast","morning meal"],         "answer": "Breakfast 7 AM to 10 AM in main restaurant." },
+  "cancel":    { "keywords": ["cancel","refund","cancellation"],   "answer": "Free cancellation up to 48 hours before arrival." },
+  "address":   { "keywords": ["address","location","directions"],  "answer": "14 Harbour Lane, London. 10 mins from the tube." },
+  "pets":      { "keywords": ["pet","dog","cat"],                  "answer": "Pet-friendly. £15/night fee applies." }
+}

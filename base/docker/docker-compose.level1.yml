@@ -1,0 +1,64 @@
+# ─────────────────────────────────────────────────────────────
+# Docker Compose — Level 1 Starter
+# Runs: n8n + Redis per client
+# Usage: docker-compose -f clients/[slug]/docker-compose.yml up -d
+# ─────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n_${HOTEL_SLUG}
+    restart: unless-stopped
+    ports:
+      - '${N8N_PORT}:5678'
+    env_file: .env
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - N8N_HOST=${HOTEL_SLUG}.youragency.com
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=${WEBHOOK_BASE_URL}
+      - GENERIC_TIMEZONE=Europe/London
+      - N8N_LOG_LEVEL=info
+    volumes:
+      - n8n_data_${HOTEL_SLUG}:/home/node/.n8n
+      - ./data/faq.json:/home/node/data/faq.json:ro
+      - ./credentials:/home/node/credentials:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - hotel_net_${HOTEL_SLUG}
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_${HOTEL_SLUG}
+    restart: unless-stopped
+    command: >
+      redis-server
+      --save 60 1
+      --loglevel warning
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data_${HOTEL_SLUG}:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hotel_net_${HOTEL_SLUG}
+
+volumes:
+  n8n_data_${HOTEL_SLUG}:
+  redis_data_${HOTEL_SLUG}:
+
+networks:
+  hotel_net_${HOTEL_SLUG}:
+    driver: bridge
