@@ -42,8 +42,22 @@ const worker = new Worker(
   async (job) => {
     const { channel, senderId, discountCode, bookingUrl, hotelName } = job.data;
     const msg = `Hi! This is ${hotelName} — you were looking at booking a room with us. Still thinking? Use code ${discountCode} for 10% off. Book here: ${bookingUrl} 🏨`;
-    console.log(`[FollowUp] Firing for ${senderId} on ${channel}: ${msg}`);
-    // TODO: Route through channel-specific send function when channel adapters are wired
+    console.log(`[FollowUp] Firing for ${senderId} on ${channel}`);
+
+    // Route through channel adapter
+    try {
+      if (channel === 'whatsapp') {
+        const wa = require('../adapters/whatsapp-adapter');
+        await wa.sendMessage(senderId, msg);
+      } else {
+        // For website_widget, instagram, facebook, tawkto:
+        // Log for now — channel-specific push adapters wired in Phase 2 handoff module
+        console.log(`[FollowUp] Message for ${channel}:`, msg);
+      }
+    } catch (err) {
+      console.error(`[FollowUp] Dispatch error on ${channel}:`, err.message);
+      throw err; // re-throw so BullMQ marks job as failed for retry
+    }
   },
   { connection }
 );

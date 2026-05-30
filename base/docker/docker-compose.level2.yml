@@ -53,6 +53,33 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      pms-api:
+        condition: service_healthy
+    networks:
+      - hotel_net_${HOTEL_SLUG}
+
+  pms-api:
+    build:
+      context: ../../base/pms-api
+      dockerfile: Dockerfile
+    image: hotel-pms-api:latest
+    container_name: pms_${HOTEL_SLUG}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - PMS_DATABASE_URL=${PMS_DATABASE_URL}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - HOTEL_NAME=${HOTEL_NAME}
+      - WEBHOOK_BASE_URL=${WEBHOOK_BASE_URL}
+    volumes:
+      - ./data/rooms.json:/app/data/rooms.json:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - hotel_net_${HOTEL_SLUG}
 
