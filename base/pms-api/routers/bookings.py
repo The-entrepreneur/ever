@@ -1,9 +1,9 @@
 """
 routers/bookings.py — POST /api/v1/bookings/create
-Creates a booking record and generates a Stripe payment link.
+Creates a booking record and generates a payment link (Paystack/Flutterwave).
 """
 import os
-import stripe
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -15,7 +15,9 @@ from models.booking import BookingRequest, BookingResponse
 
 router = APIRouter(prefix="/api/v1/bookings", tags=["bookings"])
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "paystack").lower()
+PAYSTACK_SECRET_KEY = os.getenv("PAYSTACK_SECRET_KEY", "")
+FLUTTERWAVE_SECRET_KEY = os.getenv("FLUTTERWAVE_SECRET_KEY", "")
 HOTEL_NAME    = os.getenv("HOTEL_NAME", "Hotel")
 WEBHOOK_BASE  = os.getenv("WEBHOOK_BASE_URL", "https://example.com")
 
@@ -72,33 +74,52 @@ async def create_booking(req: BookingRequest, db: AsyncSession = Depends(get_db)
     except Exception:
         await db.rollback()
 
-    # Generate Stripe Checkout session
     payment_link = None
-    if stripe.api_key and not stripe.api_key.startswith("your_"):
-        try:
-            session = stripe.checkout.Session.create(
-                payment_method_types=["card"],
-                line_items=[{
-                    "price_data": {
-                        "currency": "gbp",
-                        "product_data": {
-                            "name": f"{HOTEL_NAME} — {req.room_id} ({req.check_in} to {req.check_out})",
+    
+    # Generate Checkout session based on provider
+    try:
+        async with httpx.AsyncClient() as client:
+            if PAYMENT_PROVIDER == "paystack" and PAYSTACK_SECRET_KEY and not PAYSTACK_SECRET_KEY.startswith("sk_test_your_"):
+                res = await client.post(
+                    "https://api.paystack.co/transaction/initialize",
+                    headers={"Authorization": f"Bearer {PAYSTACK_SECRET_KEY}"},
+                    json={
+                        "email": req.email,
+                        "amount": int(total * 100),  # pence/kobo
+                        "reference": req.booking_ref,
+                        "callback_url": f"{WEBHOOK_BASE}/payment/success?ref={req.booking_ref}"
+                    }
+                )
+                if res.status_code == 200:
+                    payment_link = res.json()["data"]["authorization_url"]
+                else:
+                    print(f"[PMS] Paystack init error: {res.text}")
+
+            elif PAYMENT_PROVIDER == "flutterwave" and FLUTTERWAVE_SECRET_KEY and not FLUTTERWAVE_SECRET_KEY.startswith("FLWSECK_TEST-your_"):
+                res = await client.post(
+                    "https://api.flutterwave.com/v3/payments",
+                    headers={"Authorization": f"Bearer {FLUTTERWAVE_SECRET_KEY}"},
+                    json={
+                        "tx_ref": req.booking_ref,
+                        "amount": total,
+                        "currency": "GBP",
+                        "redirect_url": f"{WEBHOOK_BASE}/payment/success?ref={req.booking_ref}",
+                        "customer": {
+                            "email": req.email,
+                            "name": req.name,
+                            "phonenumber": req.phone or ""
                         },
-                        "unit_amount": int(total * 100),  # pence
-                    },
-                    "quantity": 1,
-                }],
-                mode="payment",
-                client_reference_id=req.booking_ref,
-                customer_email=req.email,
-                success_url=f"{WEBHOOK_BASE}/payment/success?ref={req.booking_ref}",
-                cancel_url=f"{WEBHOOK_BASE}/payment/cancel?ref={req.booking_ref}",
-                idempotency_key=f"pi_{req.booking_ref}",  # prevents duplicate charges
-            )
-            payment_link = session.url
-        except stripe.StripeError as e:
-            # Non-fatal — return booking without payment link
-            print(f"[PMS] Stripe error: {e}")
+                        "customizations": {
+                            "title": f"{HOTEL_NAME} Booking"
+                        }
+                    }
+                )
+                if res.status_code == 200:
+                    payment_link = res.json()["data"]["link"]
+                else:
+                    print(f"[PMS] Flutterwave init error: {res.text}")
+    except Exception as e:
+        print(f"[PMS] Payment link generation error: {e}")
 
     return BookingResponse(
         booking_id=f"BK_{req.booking_ref}",
