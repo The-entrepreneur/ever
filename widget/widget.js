@@ -429,9 +429,17 @@
         const data = await response.json();
         hideTyping();
 
+        if (data.agent_joining) {
+          document.getElementById('hcw-header-name').textContent = 'Live Support';
+          document.querySelector('#hcw-header-status span').textContent = 'Connecting to a team member...';
+          document.getElementById('hcw-status-dot').style.background = '#FFA500'; // Orange
+        }
+
         // n8n returns { reply: "..." } or { message: "..." }
         const reply = data.reply || data.message || data.text || 'I received your message. Let me look into that for you.';
-        renderMessage(messages, 'bot', reply);
+        if (reply) {
+          renderMessage(messages, 'bot', reply);
+        }
 
       } catch (err) {
         hideTyping();
