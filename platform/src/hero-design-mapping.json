@@ -1,0 +1,113 @@
+{
+  "system_branding": {
+    "brand_name": "Ever",
+    "theme": "Studio Wireframe Editorial (Tech-Nordic Light)",
+    "primary_accent": "#EA6639",
+    "secondary_accent": "#7C3AED",
+    "background_base": "#F9F6F0"
+  },
+  "layout_grid": {
+    "outer_container": "max-w-full mx-auto bg-[#F9F6F0] min-h-screen text-zinc-900 relative flex",
+    "columns": {
+      "left_gutter": {
+        "width_span": "hidden md:flex w-[60px] flex-col items-center justify-between py-8 border-r border-[#111111]/10 shrink-0",
+        "elements": [
+          "top_icon_square",
+          "rotated_text_tagline: 'Actionable insight and automated workflows'"
+        ]
+      },
+      "main_body": {
+        "width_span": "flex-1 flex flex-col md:flex-row border-r border-[#111111]/10",
+        "left_pane": {
+          "width_span": "w-full md:w-[70%] border-r border-[#111111]/10 p-6 md:p-12 flex flex-col justify-between",
+          "sections": [
+            "hero_headline_layer",
+            "primary_action_row",
+            "interactive_visual_workspace",
+            "secondary_value_proposition_row",
+            "integration_brand_pills"
+          ]
+        },
+        "right_sidebar_pane": {
+          "width_span": "w-full md:w-[30%] p-6 md:p-12 flex flex-col gap-12",
+          "sections": [
+            "sidebar_pitch_block",
+            "bento_operation_pill_grid",
+            "solutions_engineer_hire_pill",
+            "pms_coverage_indicator_block",
+            "interactive_guest_persona_dropdown"
+          ]
+        }
+      }
+    }
+  },
+  "components_specification": {
+    "header_navbar_translation": {
+      "left_logos": {
+        "icon": "Ever dynamic wireframe symbol",
+        "text": "Ever Cloud"
+      },
+      "middle_nav_links": [
+        "Platform (Dropdown)",
+        "Integrations (Direct List)",
+        "Pricing (Direct List)",
+        "Enterprise (Direct List)",
+        "Markets (Dropdown)",
+        "Github / Status"
+      ],
+      "right_buttons": {
+        "get_started": {
+          "style": "solid_pill",
+          "color": "#7C3AED",
+          "text": "Get Started"
+        },
+        "account": {
+          "style": "border_pill",
+          "text": "Account"
+        }
+      }
+    },
+    "hero_headline_layer": {
+      "primary_text": "Stop Surrendering 20% to OTAs. Automate Your Direct Hospitality Commerce.",
+      "serif_italic_tag": "Own your guests"
+    },
+    "primary_action_row": {
+      "primary_btn": {
+        "text": "Get Started",
+        "style": "solid_pill_zinc_or_indigo"
+      },
+      "secondary_btn": {
+        "text": "Explore 240+ PMS Integrations ↗",
+        "style": "text_link"
+      }
+    },
+    "interactive_visual_workspace": {
+      "description": "Multi-browser canvas showing hospitality transaction logs, visual workflow connections, conversational AI layers, and automated bookings"
+    },
+    "sidebar_pitch_block": {
+      "headline": "Enterprise Direct Commerce platform for robust guest operations",
+      "subtext": "Properties around the globe replace third-party interfaces with an autonomous guest OS. Retain absolute guest data ownership, maximize room yields, and connect 400+ ledger databases seamlessly."
+    },
+    "bento_operation_pill_grid": {
+      "top_row_pills": ["Front Desk", "Reservations", "Checkout"],
+      "highlight_row_pills": [
+        { "name": "Guest AI Chat", "color": "#EA6639", "icon": "sparkles" },
+        { "name": "Direct Booking", "color": "#7C3AED", "icon": "credit-card" },
+        { "name": "Back-office Sync", "color": "#2563EB", "icon": "refresh-cw" }
+      ]
+    },
+    "interactive_guest_persona_dropdown": {
+      "headline": "Choose guest persona model",
+      "options": [
+        "Formal & Luxurious (Resorts)",
+        "Friendly & Playful (Boutiques)",
+        "Prompt & Informational (Airport Hotels)",
+        "Conversational & Warm (Retreats)"
+      ]
+    },
+    "bottom_partner_logo_cloud": {
+      "headline": "Over 240+ Integrations and counting",
+      "partner_logos": ["Opera", "Mews", "Cloudbeds", "Siteminder", "Amadeus", "Stripe", "WhatsApp"]
+    }
+  }
+}

@@ -48,3 +48,22 @@ dist/
 !base/n8n-workflows/level1.json
 !base/templates/faq.json.example
 !base/templates/rooms.json.example
+
+# ── Phase 4 additions ──────────────────────────────────────────────────────────
+
+# PRD docs — internal strategy/product docs, not for the repo
+PRD/
+
+# Scratch / temp files — one-off scripts, test data
+scratch/
+
+# Platform env files — contain real keys (SUPABASE, GEMINI, VAPID)
+platform/.env
+platform/.env.*
+!platform/.env.example
+
+# Supabase local dev artefacts
+.supabase/
+
+# .agents/skills — TRACK THIS (needed on every cloned machine)
+# Do NOT add .agents/ to gitignore

@@ -1,7 +1,8 @@
 """
 models/booking.py — Pydantic models for booking creation and payment processing
+Supports Paystack, Flutterwave, and Stripe payment providers.
 """
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional
 
 
@@ -13,7 +14,7 @@ class BookingRequest(BaseModel):
     check_out: str          # ISO date: "2026-06-13"
     guests: int = 1
     room_id: str
-    booking_ref: str        # e.g. "BK-1716829200000"
+    booking_ref: str        # e.g. "BK-1716829200000" — idempotency key
 
 
 class BookingResponse(BaseModel):
@@ -29,15 +30,12 @@ class BookingResponse(BaseModel):
     status: str = "pending_payment"
 
 
-class PaymentRequest(BaseModel):
+class PaymentStatusRequest(BaseModel):
     booking_ref: str
-    stripe_payment_intent_id: str
-    stripe_signature: str   # from Stripe-Signature header — validated server-side
-    amount: float
-    currency: str = "GBP"
 
 
-class PaymentResponse(BaseModel):
+class PaymentStatusResponse(BaseModel):
     booking_ref: str
-    status: str             # "confirmed" | "failed"
-    message: str
+    status: str             # "pending_payment" | "confirmed" | "failed" | "unknown"
+    payment_provider: Optional[str] = None
+    confirmed_at: Optional[str] = None

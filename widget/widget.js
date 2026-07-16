@@ -36,11 +36,12 @@
 
   // ─── STATE ─────────────────────────────────────────────────────────────────
   const STATE = {
-    isOpen     : false,
-    messages   : [],
-    sessionId  : `session_${CONFIG.hotelSlug}_${Date.now()}`,
-    isTyping   : false,
-    hasGreeted : false,
+    isOpen      : false,
+    messages    : [],
+    sessionId   : `session_${CONFIG.hotelSlug}_${Date.now()}`,
+    isTyping    : false,
+    hasGreeted  : false,
+    liveSupport : false,   // true once human agent takes over
   };
 
   // ─── STYLES ────────────────────────────────────────────────────────────────
@@ -150,6 +151,26 @@
     }
     .hcw-msg.bot  .hcw-bubble-text { background: ${BG2}; color: ${TEXT}; border-radius: 14px 14px 14px 4px; border: 1px solid ${BORDER}; }
     .hcw-msg.user .hcw-bubble-text { background: ${CONFIG.color}; color: white; border-radius: 14px 14px 4px 14px; }
+
+    .hcw-bubble-text a { color: ${CONFIG.color}; text-decoration: underline; font-weight: 500; }
+    .hcw-bubble-text strong { font-weight: 700; }
+    .hcw-bubble-text ul { padding-left: 18px; margin-top: 4px; margin-bottom: 4px; }
+
+    .hcw-pay-btn {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 10px 16px;
+      background: #10B981;
+      color: white !important;
+      text-decoration: none !important;
+      border-radius: 8px;
+      font-weight: 600;
+      text-align: center;
+      width: 100%;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+      transition: background 0.2s, transform 0.1s;
+    }
+    .hcw-pay-btn:hover { background: #059669; transform: translateY(-1px); }
 
     .hcw-time { font-size: 10px; color: ${SUBTEXT}; margin-top: 3px; }
     .hcw-msg.user .hcw-time { text-align: right; }
@@ -327,9 +348,36 @@
   };
 
   // ─── MESSAGE RENDERER ──────────────────────────────────────────────────────
+  const parseMarkdown = (text) => {
+    let html = text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, (match, title, url) => {
+        // SAQ-A-EP Payment Link parsing
+        const isPayment = url.includes('stripe.com') || url.includes('flutterwave.com') || url.includes('paystack.com') || url.includes('checkout');
+        const className = isPayment ? 'hcw-pay-btn' : '';
+        const target = isPayment ? '_blank' : '_blank'; // Open secure hosted checkout in new tab to guarantee SAQ-A
+        return `<a href="${url}" class="${className}" target="${target}" rel="noopener noreferrer">${title}</a>`;
+      });
+    
+    // Parse unordered lists
+    html = html.replace(/^[-*]\s+(.*)$/gm, '<li>$1</li>');
+    if (html.includes('<li>')) {
+      html = html.replace(/(<li>.*<\/li>(\n)?)+/g, '<ul>$&</ul>');
+    }
+    return html;
+  };
+
   const renderMessage = (messagesEl, role, text) => {
     const wrapper = el('div', { class: `hcw-msg ${role}` });
-    const bubble  = el('div', { class: 'hcw-bubble-text', text });
+    const bubble  = el('div', { class: 'hcw-bubble-text' });
+    
+    if (role === 'bot') {
+      bubble.innerHTML = parseMarkdown(text);
+    } else {
+      bubble.textContent = text; // Prevent XSS from user input
+    }
+    
     const time    = el('div', { class: 'hcw-time', text: formatTime() });
     wrapper.append(bubble, time);
     messagesEl.appendChild(wrapper);
@@ -429,14 +477,33 @@
         const data = await response.json();
         hideTyping();
 
-        if (data.agent_joining) {
+        // ── Handle human handoff ──
+        if (data.agent_joining && !STATE.liveSupport) {
+          STATE.liveSupport = true;
           document.getElementById('hcw-header-name').textContent = 'Live Support';
           document.querySelector('#hcw-header-status span').textContent = 'Connecting to a team member...';
-          document.getElementById('hcw-status-dot').style.background = '#FFA500'; // Orange
+          document.getElementById('hcw-status-dot').style.background = '#FFA500';
+
+          // Update input to show waiting state
+          const inputEl = document.getElementById('hcw-input');
+          inputEl.placeholder = 'A team member will respond shortly...';
+          inputEl.disabled = false; // keep enabled so guest can still type to agent
+
+          setTimeout(() => {
+            // After 3s, update status to show agent is connected
+            document.querySelector('#hcw-header-status span').textContent = '● Live agent connected';
+            document.getElementById('hcw-status-dot').style.background = '#4ADE80';
+          }, 3000);
+        }
+
+        // ignored: true means handoff is active, bot is silenced
+        if (data.ignored && data.reason === 'handoff_active') {
+          STATE.isTyping = false;
+          return; // message was swallowed — agent is handling it
         }
 
         // n8n returns { reply: "..." } or { message: "..." }
-        const reply = data.reply || data.message || data.text || 'I received your message. Let me look into that for you.';
+        const reply = data.reply || data.message || data.text;
         if (reply) {
           renderMessage(messages, 'bot', reply);
         }

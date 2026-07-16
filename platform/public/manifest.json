@@ -1,0 +1,26 @@
+{
+  "short_name": "Ever",
+  "name": "Ever Hotel Operations Console",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/console",
+  "background_color": "#121212",
+  "theme_color": "#EA6639",
+  "display": "standalone",
+  "orientation": "portrait"
+}

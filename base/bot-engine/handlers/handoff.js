@@ -1,6 +1,6 @@
 'use strict';
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-const redis = require('../redis/client');
+const { setHandoffActive, clearHandoff } = require('../redis/client');
 const tracker = require('../services/tracker');
 
 class HandoffHandler {
@@ -15,9 +15,8 @@ class HandoffHandler {
       // 1. Log the handoff event
       await tracker.logHandoffSession(client_id || process.env.HOTEL_SLUG, session_id, channel, reason || 'AI triggered');
 
-      // 2. Set Redis lock to silence the bot
-      // The lock automatically expires after 24 hours in case the human forgets to resolve it
-      await redis.set(`handoff:${session_id}`, 'true', 'EX', 86400);
+      // 2. Set Redis lock to silence the bot (expires after 24 hours)
+      await setHandoffActive(session_id, 'true', 24);
 
       if (channel === 'whatsapp' && wa_id) {
         // Cloud API - we use the handoff lock.
@@ -51,7 +50,7 @@ class HandoffHandler {
     if (!session_id) return res.status(400).json({ error: 'session_id required' });
 
     try {
-      await redis.del(`handoff:${session_id}`);
+      await clearHandoff(session_id);
       return res.json({ success: true, message: 'Handoff resolved, bot resumed' });
     } catch (err) {
       console.error('[Handoff] Error resolving handoff:', err);

@@ -39,12 +39,15 @@ async function calculateMonthlyFees() {
       
       console.log(`[FeeCalc] Client: ${clientId} | Bookings: ${row.total_bookings} | Rev: $${totalRevenue} | Fee: $${feeAmount.toFixed(2)}`);
       
-      // Insert into monthly_invoices
+      // Insert into monthly_invoices (matching schema.sql)
+      const startDateStr = startOfPrevMonth.toISOString().split('T')[0];
+      const endDateStr = endOfPrevMonth.toISOString().split('T')[0];
+      
       await pool.query(`
-        INSERT INTO monthly_invoices (client_id, invoice_month, base_fee, booking_fee, total_amount, status)
-        VALUES ($1, $2, $3, $4, $5, 'pending')
-        ON CONFLICT (client_id, invoice_month) DO NOTHING
-      `, [clientId, monthString, 99.00, feeAmount, 99.00 + feeAmount]);
+        INSERT INTO monthly_invoices (client_id, period_start, period_end, total_bookings, total_value, fee_amount, status)
+        VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+        ON CONFLICT (client_id, period_start) DO NOTHING
+      `, [clientId, startDateStr, endDateStr, parseInt(row.total_bookings), totalRevenue, feeAmount]);
     }
     
     console.log(`[FeeCalc] Completed calculation for ${res.rows.length} clients.`);

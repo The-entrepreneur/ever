@@ -1,0 +1,6 @@
+{
+  "name": "AutoStay",
+  "description": "An enterprise-grade middleware platform for hospitality ecosystems, featuring autonomous Guest Concierge and Hospitality Commerce Agent engines.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

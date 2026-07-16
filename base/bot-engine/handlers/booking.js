@@ -100,12 +100,13 @@ const handle = async (session, message, channel, senderId, hotelSlug, lang) => {
         booking_ref: bookingRef,
       });
 
-      session.data.bookingId = booking.booking_id;
-      session.data.bookingRef = bookingRef;
+      session.data.bookingId   = booking.booking_id;
+      session.data.bookingRef  = bookingRef;
+      session.data.payment_link = booking.payment_link || null;
       session.stage = 'booking_payment';
 
-      // Schedule follow-up (cancelled if payment completes)
-      await scheduleFollowUp(senderId, channel, senderId, parseInt(process.env.FOLLOW_UP_DELAY_MINUTES || '60'));
+      // Schedule follow-up using bookingRef as idempotent jobId
+      await scheduleFollowUp(bookingRef, channel, senderId, parseInt(process.env.FOLLOW_UP_DELAY_MINUTES || '60'));
 
       // Save lead
       await leadHandler.saveLead({
@@ -120,6 +121,14 @@ const handle = async (session, message, channel, senderId, hotelSlug, lang) => {
       });
 
       return `Your ${session.data.selectedRoom.type} room is held for 15 minutes.\n\nBooking Reference: ${bookingRef}\n\nPlease complete payment here to confirm your reservation:\n${booking.payment_link || process.env.HOTEL_BOOKING_URL}\n\nTotal: £${booking.total}`;
+    }
+
+    case 'booking_payment': {
+      if (msg.includes('help') || msg.includes('support') || msg.includes('human') || msg.includes('agent')) {
+        session.stage = 'handoff_pending';
+        return `[HANDOFF_REQUIRED] Connecting you to a member of our team...`;
+      }
+      return `Please complete the payment using the link below to confirm your booking:\n${session.data.payment_link || process.env.HOTEL_BOOKING_URL}\n\nYour room is held for 15 minutes under reference ${session.data.bookingRef}.`;
     }
 
     default:

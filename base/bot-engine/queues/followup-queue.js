@@ -1,8 +1,15 @@
 'use strict';
 const { Queue, Worker } = require('bullmq');
-const { redis } = require('../redis/client');
 
-const connection = { client: redis };
+// BullMQ requires its own connection config — not a shared ioredis client
+const REDIS_URL = process.env.REDIS_URL || 'redis://redis:6379';
+const redisUrl   = new URL(REDIS_URL);
+const connection = {
+  host:     redisUrl.hostname,
+  port:     parseInt(redisUrl.port) || 6379,
+  password: redisUrl.password || undefined,
+  tls:      redisUrl.protocol === 'rediss:' ? {} : undefined,
+};
 
 const followUpQueue = new Queue('follow-up', { connection });
 
@@ -49,10 +56,17 @@ const worker = new Worker(
       if (channel === 'whatsapp') {
         const wa = require('../adapters/whatsapp-adapter');
         await wa.sendMessage(senderId, msg);
+      } else if (channel === 'facebook' || channel === 'instagram') {
+        const meta = require('../adapters/meta-adapter');
+        await meta.sendMessage(senderId, msg);
+      } else if (channel === 'tawkto') {
+        const tawkto = require('../adapters/tawkto-adapter');
+        await tawkto.sendMessage(senderId, msg);
+      } else if (channel === 'website_widget') {
+        const widget = require('../adapters/widget-adapter');
+        await widget.sendMessage(senderId, msg);
       } else {
-        // For website_widget, instagram, facebook, tawkto:
-        // Log for now — channel-specific push adapters wired in Phase 2 handoff module
-        console.log(`[FollowUp] Message for ${channel}:`, msg);
+        console.log(`[FollowUp] Message for unsupported channel ${channel}:`, msg);
       }
     } catch (err) {
       console.error(`[FollowUp] Dispatch error on ${channel}:`, err.message);

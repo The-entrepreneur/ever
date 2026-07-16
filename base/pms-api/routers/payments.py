@@ -49,8 +49,9 @@ async def payment_webhook(
         
         if signature != expected_sig:
             raise HTTPException(status_code=400, detail="Invalid signature")
-            
-        data = await request.json()
+
+        import json as _json
+        data = _json.loads(payload_bytes)
         if data.get("event") == "charge.success" and data.get("data", {}).get("status") == "success":
             booking_ref = data["data"].get("reference")
             is_successful = True
@@ -59,25 +60,29 @@ async def payment_webhook(
         signature = headers.get("verif-hash")
         if not signature or signature != FLUTTERWAVE_SECRET_HASH:
             raise HTTPException(status_code=400, detail="Invalid signature")
-            
-        data = await request.json()
+
+        import json as _json
+        data = _json.loads(payload_bytes)
         if data.get("event") == "charge.completed" and data.get("data", {}).get("status") == "successful":
             booking_ref = data["data"].get("tx_ref")
             is_successful = True
 
     if booking_ref and is_successful:
         try:
-            # Confirm booking in database
+            provider = PAYMENT_PROVIDER
             await db.execute(
                 text("""
                     UPDATE bookings
-                    SET status = 'confirmed', confirmed_at = NOW()
+                    SET status = 'confirmed',
+                        payment_reference = :ref,
+                        payment_provider  = :provider,
+                        confirmed_at = NOW()
                     WHERE booking_ref = :ref
                 """),
-                {"ref": booking_ref}
+                {"ref": booking_ref, "provider": provider}
             )
             await db.commit()
-            print(f"[PMS] Booking confirmed via {PAYMENT_PROVIDER}: {booking_ref}")
+            print(f"[PMS] Booking confirmed via {provider}: {booking_ref}")
         except Exception as e:
             await db.rollback()
             print(f"[PMS] DB confirm error: {e}")
@@ -92,12 +97,17 @@ async def process_payment(booking_ref: str, db: AsyncSession = Depends(get_db)):
     """
     try:
         result = await db.execute(
-            text("SELECT status FROM bookings WHERE booking_ref = :ref"),
+            text("SELECT status, payment_provider, confirmed_at FROM bookings WHERE booking_ref = :ref"),
             {"ref": booking_ref}
         )
         row = result.fetchone()
         if row:
-            return {"booking_ref": booking_ref, "status": row[0]}
+            return {
+                "booking_ref": booking_ref,
+                "status": row[0],
+                "payment_provider": row[1],
+                "confirmed_at": str(row[2]) if row[2] else None
+            }
     except Exception:
         pass
     return {"booking_ref": booking_ref, "status": "unknown"}
