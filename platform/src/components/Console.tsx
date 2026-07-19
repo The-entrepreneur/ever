@@ -34,7 +34,7 @@ import { DashboardTab } from "./console-tabs/DashboardTab";
 import { InboxTab } from "./console-tabs/InboxTab";
 import { CRMTab } from "./console-tabs/CRMTab";
 import { KnowledgeBaseTab } from "./console-tabs/KnowledgeBaseTab";
-import { BotSettingsTab } from "./console-tabs/BotSettingsTab";
+import { AgentSettingsTab } from "./console-tabs/AgentSettingsTab";
 import { ChannelsTab } from "./console-tabs/ChannelsTab";
 import { StaffTab } from "./console-tabs/StaffTab";
 import { BookingsTab } from "./console-tabs/BookingsTab";
@@ -67,7 +67,7 @@ function urlBase64ToUint8Array(base64String: string) {
 export function Console() {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "inbox" | "crm" | "knowledge_base" | "bot_settings" | "channels" | "staff" | "bookings" | "analytics" | "feedback" | "compliance" | "billing">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "inbox" | "crm" | "knowledge_base" | "agent_settings" | "channels" | "staff" | "bookings" | "analytics" | "feedback" | "compliance" | "billing">("dashboard");
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -318,7 +318,7 @@ export function Console() {
               <div className="px-3 mb-2"><span className="text-micro font-bold text-dash-text-muted uppercase tracking-wider">Configuration</span></div>
               <div className="space-y-2">
                 {[
-                  { tab: "bot_settings", label: "Bot Settings", icon: Settings },
+                  { tab: "agent_settings", label: "Agent Settings", icon: Settings },
                   { tab: "channels", label: "Channels", icon: Blocks },
                   { tab: "staff", label: "Staff", icon: UserCheck },
                   { tab: "compliance", label: "Compliance & Privacy", icon: ShieldCheck },
@@ -427,7 +427,7 @@ export function Console() {
             {isSidebarExpanded && <div className="px-3 mb-2"><span className="text-micro font-bold text-dash-text-muted uppercase tracking-wider">Configuration</span></div>}
             <div className="space-y-2">
               {[
-                { tab: "bot_settings", label: "Bot Settings", icon: Settings },
+                { tab: "agent_settings", label: "Agent Settings", icon: Settings },
                 { tab: "channels", label: "Channels", icon: Blocks },
                 { tab: "staff", label: "Staff", icon: UserCheck },
                 { tab: "compliance", label: "Compliance & Privacy", icon: ShieldCheck },
@@ -606,7 +606,7 @@ export function Console() {
           {activeTab === "inbox" && <InboxTab />}
           {activeTab === "crm" && <CRMTab />}
           {activeTab === "knowledge_base" && <KnowledgeBaseTab role={propertyProfile.role} />}
-          {activeTab === "bot_settings" && <BotSettingsTab role={propertyProfile.role} />}
+          {activeTab === "agent_settings" && <AgentSettingsTab role={propertyProfile.role} />}
           {activeTab === "channels" && <ChannelsTab role={propertyProfile.role} />}
           {activeTab === "staff" && <StaffTab role={propertyProfile.role} />}
           {activeTab === "bookings" && <BookingsTab />}
