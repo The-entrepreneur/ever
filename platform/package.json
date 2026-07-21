@@ -1,7 +1,14 @@
 {
-  "name": "react-example",
+  "name": "ever-platform",
+  "description": "Ever — The Guest Operating System for Modern Hospitality",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
+  "author": "Dero Idoghor <devworks.ent@gmail.com>",
+  "homepage": "https://ever-tau.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/The-entrepreneur/ever"
+  },
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
