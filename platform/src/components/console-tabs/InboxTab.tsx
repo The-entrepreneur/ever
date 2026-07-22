@@ -287,6 +287,31 @@ export function InboxTab() {
     );
   };
 
+  const handleResolve = async () => {
+    setAgentMode(false);
+    setConversations((prev) =>
+      prev.map((c) => (c.id === selectedConvId ? { ...c, status: "resolved" } : c))
+    );
+
+    // For OpenBSP channels, resume the conversation natively
+    if (selectedConv && (selectedConv.channel === "whatsapp" || selectedConv.channel === "instagram")) {
+      try {
+        await fetch("/api/conversations/pause", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            paused: false,
+            session_id: selectedConv.session_id,
+            channel: selectedConv.channel,
+            channel_id: selectedConv.session_id
+          })
+        });
+      } catch (err) {
+        console.warn("[Inbox] Failed to resume OpenBSP conversation:", err);
+      }
+    }
+  };
+
   const handleSend = () => {
     if (!replyText.trim() || !selectedConvId) return;
     const newMsg: Message = {
@@ -406,12 +431,7 @@ export function InboxTab() {
                 <div className="flex items-center gap-2 shrink-0">
                   {agentMode ? (
                     <button
-                      onClick={() => {
-                        setAgentMode(false);
-                        setConversations((prev) =>
-                          prev.map((c) => (c.id === selectedConvId ? { ...c, status: "resolved" } : c))
-                        );
-                      }}
+                      onClick={handleResolve}
                       className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-md hover:bg-emerald-700 transition-colors flex items-center gap-1.5"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />

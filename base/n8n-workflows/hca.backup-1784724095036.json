@@ -1,5 +1,5 @@
 {
-  "name": "GCE v4",
+  "name": "Level 2 — Hospitality Commerce Agent v4 (HCA)",
   "nodes": [
     {
       "parameters": {
@@ -151,7 +151,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const data = $input.item.json || {};\nconst hi = data.hotelInfo || {};\nconst faqs = data.faqs || [];\nconst rooms = data.rooms || [];\nconst sym = hi.currency_symbol || '';\n\nconst faqText = faqs.length > 0\n  ? faqs.map(function(f) { return 'Q: ' + f.question + '\\nA: ' + f.answer; }).join('\\n\\n')\n  : 'No specific FAQs configured.';\n\nconst roomsText = rooms.length > 0\n  ? rooms.map(function(r) {\n      return '- ' + r.type + ': ' + sym + r.rate + '/night, sleeps ' + r.capacity + '. ' + r.description + ' Amenities: ' + r.amenities;\n    }).join('\\n')\n  : 'Room information not available.';\n\nconst systemPrompt =\n  'You are the friendly concierge assistant for ' + (hi.hotel_name || 'our hotel') + '. You help guests warmly and professionally.\\n\\n' +\n  'HOTEL DETAILS:\\n' +\n  'Name: ' + (hi.hotel_name || '') + '\\n' +\n  'Address: ' + (hi.address || '') + '\\n' +\n  'Phone: ' + (hi.phone || '') + '\\n' +\n  'Check-in: ' + (hi.checkin_time || '') + '\\n' +\n  'Check-out: ' + (hi.checkout_time || '') + '\\n' +\n  'Booking URL: ' + (hi.booking_url || '') + '\\n' +\n  'WhatsApp: ' + (hi.whatsapp_number || '') + '\\n\\n' +\n  'AVAILABLE ROOMS:\\n' + roomsText + '\\n\\n' +\n  'FREQUENTLY ASKED QUESTIONS:\\n' + faqText + '\\n\\n' +\n  'RESPONSE INSTRUCTIONS:\\n' +\n  '- Be warm, conversational, and genuinely helpful. Never sound robotic or scripted.\\n' +\n  '- Only answer using hotel information above. Never invent or assume details.\\n' +\n  '- Keep replies concise (2-4 sentences) unless more detail is genuinely needed.\\n' +\n  '- For bookings, direct guest to ' + (hi.booking_url || 'our website') + ' or WhatsApp ' + (hi.whatsapp_number || '') + '.\\n' +\n  '- If you cannot answer from the information given, warmly say so and offer the phone number: ' + (hi.phone || '') + '.\\n\\n' +\n  'LEAD CAPTURE INSTRUCTIONS:\\n' +\n  '- When a guest asks about rooms, availability, prices, or bookings, naturally and warmly collect: their full name, email address, phone number (optional), check-in date, and check-out date. Collect one piece at a time — never ask for everything at once.\\n' +\n  '- Once you have at minimum a name AND one contact method (email or phone), append the following on a brand new line at the very END of your response. The guest will NEVER see this tag — it is stripped before delivery:\\n' +\n  '[LEAD: name=Full Name, email=email@example.com, phone=+1234567890, checkin=YYYY-MM-DD, checkout=YYYY-MM-DD]\\n' +\n  '- Only include fields you have actually collected. Omit fields you do not have. Never fabricate lead data.\\n' +\n  '- Only append the [LEAD] tag once you have at minimum name + email OR phone.\\n\\n' +\n  'HANDOFF INSTRUCTIONS:\\n' +\n  '- If the guest explicitly asks to speak to a human, agent, manager, or real person: begin your response with exactly [HANDOFF_REQUIRED] then write a warm holding message. Example: [HANDOFF_REQUIRED] Of course! Let me connect you with a member of our team right away — please hold for just a moment.\\n' +\n  '- If the guest expresses clear frustration, anger, or serious complaint: begin with [HANDOFF_REQUIRED] and acknowledge warmly.\\n' +\n  '- If the request is legal, medical, or operationally beyond your scope: begin with [HANDOFF_REQUIRED].\\n' +\n  '- In ALL other cases, do NOT include [HANDOFF_REQUIRED] in your response.\\n\\n' +\n  '- Guest language detected: ' + (data.lang || 'en') + '. If not English, reply in the detected language.';\n\n\nconst history = data.conversation_history || [];\nconst historyText = history.length > 0\n  ? '\\nCONVERSATION HISTORY (last ' + history.length + ' turns):\\n' +\n    history.map(function(t) { return '[' + (t.role === 'assistant' ? 'Assistant' : 'Guest') + ']: ' + t.content; }).join('\\n') + '\\n'\n  : '';\n  systemPrompt = systemPrompt.replace('FREQUENTLY ASKED QUESTIONS', historyText + 'FREQUENTLY ASKED QUESTIONS');\nreturn { json: { ...data, systemPrompt: systemPrompt } };"
+        "jsCode": "const data = $input.item.json || {};\nconst hi = data.hotelInfo || {};\nconst faqs = data.faqs || [];\nconst rooms = data.rooms || [];\nconst sym = hi.currency_symbol || '';\n\nconst faqText = faqs.length > 0\n  ? faqs.map(function(f) { return 'Q: ' + f.question + '\\nA: ' + f.answer; }).join('\\n\\n')\n  : 'No specific FAQs configured.';\n\nconst roomsText = rooms.length > 0\n  ? rooms.map(function(r) {\n      return '- ' + r.type + ': ' + sym + r.rate + '/night, sleeps ' + r.capacity + '. ' + r.description + ' Amenities: ' + r.amenities;\n    }).join('\\n')\n  : 'Room information not available.';\n\nconst systemPrompt =\n  'You are the friendly concierge assistant for ' + (hi.hotel_name || 'our hotel') + '. You help guests warmly and professionally.\\n\\n' +\n  'HOTEL DETAILS:\\n' +\n  'Name: ' + (hi.hotel_name || '') + '\\n' +\n  'Address: ' + (hi.address || '') + '\\n' +\n  'Phone: ' + (hi.phone || '') + '\\n' +\n  'Check-in: ' + (hi.checkin_time || '') + '\\n' +\n  'Check-out: ' + (hi.checkout_time || '') + '\\n' +\n  'Booking URL: ' + (hi.booking_url || '') + '\\n' +\n  'WhatsApp: ' + (hi.whatsapp_number || '') + '\\n\\n' +\n  'AVAILABLE ROOMS:\\n' + roomsText + '\\n\\n' +\n  'FREQUENTLY ASKED QUESTIONS:\\n' + faqText + '\\n\\n' +\n  'RESPONSE INSTRUCTIONS:\\n' +\n  '- Be warm, conversational, and genuinely helpful. Never sound robotic or scripted.\\n' +\n  '- Only answer using hotel information above. Never invent or assume details.\\n' +\n  '- Keep replies concise (2-4 sentences) unless more detail is genuinely needed.\\n' +\n  '- For bookings, direct guest to ' + (hi.booking_url || 'our website') + ' or WhatsApp ' + (hi.whatsapp_number || '') + '.\\n' +\n  '- If you cannot answer from the information given, warmly say so and offer the phone number: ' + (hi.phone || '') + '.\\n\\n' +\n  \n  'HCA INTENTS INSTRUCTIONS:\\n' +\n  '- If the guest explicitly asks to order food, drinks, or room service: append [ORDER_INTENT: category=f&b]\\n' +\n  '- If the guest explicitly asks to book a spa service or massage: append [ORDER_INTENT: category=spa]\\n' +\n  '- If the guest asks for transport or a car: append [ORDER_INTENT: category=transport]\\n' +\n  '- If the guest asks for laundry service: append [SERVICE_INTENT: type=laundry]\\n' +\n  '- If the guest asks for housekeeping (towels, cleaning, pillows): append [SERVICE_INTENT: type=housekeeping]\\n' +\n  '- If the guest asks for a wake-up call: append [SERVICE_INTENT: type=wakeup]\\n' +\n  '- If the guest asks to book a restaurant table: append [SERVICE_INTENT: type=restaurant]\\n' +\n  '- If the guest asks to book a room, check live availability, or make a reservation: append [BOOKING_INTENT]\\n\\n' +\n  'LEAD CAPTURE INSTRUCTIONS:\\n' +\n  '- When a guest asks about rooms, availability, prices, or bookings, naturally and warmly collect: their full name, email address, phone number (optional), check-in date, and check-out date. Collect one piece at a time — never ask for everything at once.\\n' +\n  '- Once you have at minimum a name AND one contact method (email or phone), append the following on a brand new line at the very END of your response. The guest will NEVER see this tag — it is stripped before delivery:\\n' +\n  '[LEAD: name=Full Name, email=email@example.com, phone=+1234567890, checkin=YYYY-MM-DD, checkout=YYYY-MM-DD]\\n' +\n  '- Only include fields you have actually collected. Omit fields you do not have. Never fabricate lead data.\\n' +\n  '- Only append the [LEAD] tag once you have at minimum name + email OR phone.\\n\\n' +\n  'HANDOFF INSTRUCTIONS:\\n' +\n  '- If the guest explicitly asks to speak to a human, agent, manager, or real person: begin your response with exactly [HANDOFF_REQUIRED] then write a warm holding message. Example: [HANDOFF_REQUIRED] Of course! Let me connect you with a member of our team right away — please hold for just a moment.\\n' +\n  '- If the guest expresses clear frustration, anger, or serious complaint: begin with [HANDOFF_REQUIRED] and acknowledge warmly.\\n' +\n  '- If the request is legal, medical, or operationally beyond your scope: begin with [HANDOFF_REQUIRED].\\n' +\n  '- In ALL other cases, do NOT include [HANDOFF_REQUIRED] in your response.\\n\\n' +\n  '- Guest language detected: ' + (data.lang || 'en') + '. If not English, reply in the detected language.';\n\n\nconst history = data.conversation_history || [];\nconst historyText = history.length > 0\n  ? '\\nCONVERSATION HISTORY (last ' + history.length + ' turns):\\n' +\n    history.map(function(t) { return '[' + (t.role === 'assistant' ? 'Assistant' : 'Guest') + ']: ' + t.content; }).join('\\n') + '\\n'\n  : '';\n  systemPrompt = systemPrompt.replace('FREQUENTLY ASKED QUESTIONS', historyText + 'FREQUENTLY ASKED QUESTIONS');\nreturn { json: { ...data, systemPrompt: systemPrompt } };"
       },
       "id": "3fe21c7f-32d1-40ce-baa9-c52b056d3d7d",
       "name": "Build System Prompt",
@@ -216,7 +216,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const agentRaw = $input.item.json;\nconst origData = $('Build System Prompt').item.json;\n\n// Parse AI output — LangChain Agent outputs to 'output' field\nlet rawContent = null;\nif (agentRaw.output !== undefined && agentRaw.output !== null && String(agentRaw.output).trim() !== '') {\n  rawContent = String(agentRaw.output);\n} else if (agentRaw.choices) {\n  rawContent = (agentRaw.choices[0] && agentRaw.choices[0].message && agentRaw.choices[0].message.content) || null;\n} else if (agentRaw.data && agentRaw.data.choices) {\n  rawContent = (agentRaw.data.choices[0] && agentRaw.data.choices[0].message && agentRaw.data.choices[0].message.content) || null;\n} else if (typeof agentRaw.data === 'string') {\n  try { rawContent = JSON.parse(agentRaw.data).choices[0].message.content; } catch(e) {}\n}\n\nconst fallbackReply = \"I apologize, I'm having a technical issue right now. Please contact us at \" +\n  ((origData.hotelInfo && origData.hotelInfo.phone) || 'reception') + ' and we will be happy to help.';\n\nlet reply = rawContent || fallbackReply;\n\n// ── Parse HANDOFF tag ────────────────────────────────────────────────────────\nlet handoff_required = false;\nif (reply.includes('[HANDOFF_REQUIRED]')) {\n  handoff_required = true;\n  reply = reply.replace('[HANDOFF_REQUIRED]', '').trim();\n}\n\n// Keyword safety net — catches explicit requests the AI may have missed\nconst guestText = (origData.text || '').toLowerCase();\nconst humanKeywords = [\n  'speak to someone','talk to someone','human please','real person',\n  'live agent','speak with a person','customer service','manager please',\n  'need a human','want to speak','talk to a person','let me speak',\n  'speak to a manager','talk to manager','speak to staff','transfer me'\n];\nif (!handoff_required && humanKeywords.some(function(kw) { return guestText.includes(kw); })) {\n  handoff_required = true;\n  reply = \"Of course! Let me connect you with a member of our team right away. Please hold for just a moment — they'll be with you shortly.\";\n}\n\n// ── Parse LEAD tag ────────────────────────────────────────────────────────────\nlet lead_captured = false;\nlet lead_data = null;\nconst leadMatch = reply.match(/\\[LEAD:\\s*([^\\]]+)\\]/);\nif (leadMatch) {\n  lead_captured = true;\n  const parts = leadMatch[1];\n  const extract = function(key) {\n    const m = parts.match(new RegExp(key + '=([^,\\\\]]+)'));\n    return m ? m[1].trim() : null;\n  };\n  lead_data = {\n    name: extract('name'),\n    email: extract('email'),\n    phone: extract('phone'),\n    checkin: extract('checkin'),\n    checkout: extract('checkout'),\n  };\n  // Strip tag — guest never sees it\n  reply = reply.replace(/\\[LEAD:[^\\]]+\\]/g, '').trim();\n}\n\nconst response_ms = Date.now() - new Date(origData.timestamp || Date.now()).getTime();\nconst intent = handoff_required ? 'handoff' : lead_captured ? 'booking_enquiry' : 'faq';\nreturn {\n  json: {\n    session_id: origData.session_id,\n    sender_id: origData.sender_id,\n    channel: origData.channel,\n    lang: origData.lang,\n    hotel_slug: origData.hotel_slug,\n    hotelInfo: origData.hotelInfo || {},\n    text: origData.text || '',\n    timestamp: origData.timestamp || new Date().toISOString(),\n    reply: reply,\n    handoff_required: handoff_required,\n    lead_captured: lead_captured,\n    lead_data: lead_data,\n    response_ms: response_ms,\n    intent: intent\n  }\n};"
+        "jsCode": "const agentRaw = $input.item.json;\nconst origData = $('Build System Prompt').item.json;\n\n// Parse AI output — LangChain Agent outputs to 'output' field\nlet rawContent = null;\nif (agentRaw.output !== undefined && agentRaw.output !== null && String(agentRaw.output).trim() !== '') {\n  rawContent = String(agentRaw.output);\n} else if (agentRaw.choices) {\n  rawContent = (agentRaw.choices[0] && agentRaw.choices[0].message && agentRaw.choices[0].message.content) || null;\n} else if (agentRaw.data && agentRaw.data.choices) {\n  rawContent = (agentRaw.data.choices[0] && agentRaw.data.choices[0].message && agentRaw.data.choices[0].message.content) || null;\n} else if (typeof agentRaw.data === 'string') {\n  try { rawContent = JSON.parse(agentRaw.data).choices[0].message.content; } catch(e) {}\n}\n\nconst fallbackReply = \"I apologize, I'm having a technical issue right now. Please contact us at \" +\n  ((origData.hotelInfo && origData.hotelInfo.phone) || 'reception') + ' and we will be happy to help.';\n\nlet reply = rawContent || fallbackReply;\n\n// ── Parse HANDOFF tag ────────────────────────────────────────────────────────\nlet handoff_required = false;\nif (reply.includes('[HANDOFF_REQUIRED]')) {\n  handoff_required = true;\n  reply = reply.replace('[HANDOFF_REQUIRED]', '').trim();\n}\n\n// Keyword safety net — catches explicit requests the AI may have missed\nconst guestText = (origData.text || '').toLowerCase();\nconst humanKeywords = [\n  'speak to someone','talk to someone','human please','real person',\n  'live agent','speak with a person','customer service','manager please',\n  'need a human','want to speak','talk to a person','let me speak',\n  'speak to a manager','talk to manager','speak to staff','transfer me'\n];\nif (!handoff_required && humanKeywords.some(function(kw) { return guestText.includes(kw); })) {\n  handoff_required = true;\n  reply = \"Of course! Let me connect you with a member of our team right away. Please hold for just a moment — they'll be with you shortly.\";\n}\n\n\n// Parse ORDER_INTENT\nlet order_intent = null;\nconst orderMatch = reply.match(/\\[ORDER_INTENT:\\s*category=([^\\]]+)\\]/);\nif (orderMatch) {\n  order_intent = orderMatch[1].trim();\n  reply = reply.replace(/\\[ORDER_INTENT:[^\\]]+\\]/g,'').trim();\n}\n\n// Parse SERVICE_INTENT\nlet service_intent = null;\nconst svcMatch = reply.match(/\\[SERVICE_INTENT:\\s*type=([^\\]]+)\\]/);\nif (svcMatch) {\n  service_intent = svcMatch[1].trim();\n  reply = reply.replace(/\\[SERVICE_INTENT:[^\\]]+\\]/g,'').trim();\n}\n\n// Parse BOOKING_INTENT\nlet booking_intent = false;\nif (reply.includes('[BOOKING_INTENT]')) {\n  booking_intent = true;\n  reply = reply.replace('[BOOKING_INTENT]', '').trim();\n}\n  \\n// ── Parse LEAD tag ────────────────────────────────────────────────────────────\nlet lead_captured = false;\nlet lead_data = null;\nconst leadMatch = reply.match(/\\[LEAD:\\s*([^\\]]+)\\]/);\nif (leadMatch) {\n  lead_captured = true;\n  const parts = leadMatch[1];\n  const extract = function(key) {\n    const m = parts.match(new RegExp(key + '=([^,\\\\]]+)'));\n    return m ? m[1].trim() : null;\n  };\n  lead_data = {\n    name: extract('name'),\n    email: extract('email'),\n    phone: extract('phone'),\n    checkin: extract('checkin'),\n    checkout: extract('checkout'),\n  };\n  // Strip tag — guest never sees it\n  reply = reply.replace(/\\[LEAD:[^\\]]+\\]/g, '').trim();\n}\n\nconst response_ms = Date.now() - new Date(origData.timestamp || Date.now()).getTime();\nconst intent = handoff_required ? 'handoff' : lead_captured ? 'booking_enquiry' : 'faq';\nreturn {\n  json: {\n    session_id: origData.session_id,\n    sender_id: origData.sender_id,\n    channel: origData.channel,\n    lang: origData.lang,\n    hotel_slug: origData.hotel_slug,\n    hotelInfo: origData.hotelInfo || {},\n    text: origData.text || '',\n    timestamp: origData.timestamp || new Date().toISOString(),\n    reply: reply,\n    handoff_required: handoff_required,\n    order_intent: order_intent,\n    service_intent: service_intent,\n    booking_intent: booking_intent,\n    lead_captured: lead_captured,\n    lead_data: lead_data,\n    response_ms: response_ms,\n    intent: intent\n  }\n};"
       },
       "id": "c2bfcc84-56c6-47cd-8db1-1ceb322405be",
       "name": "Extract AI Reply",
@@ -363,37 +363,6 @@
       ]
     },
     {
-      "id": "8fa3416d-9e39-4cca-892c-655f0e693f30_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
-    },
-    {
       "parameters": {
         "fromEmail": "noreply@youragency.com",
         "toEmail": "={{ $('Extract AI Reply').item.json.hotelInfo && $('Extract AI Reply').item.json.hotelInfo.rep_email || '' }}",
@@ -419,37 +388,6 @@
       "notes": "Configure SMTP credentials in n8n Credentials. Add rep_email row to hotel_info Google Sheet."
     },
     {
-      "id": "f97c5e97-9c46-49d1-b1f7-d3a5156c7749_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
-    },
-    {
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "// Email node response discarded — restore clean guest data from Extract AI Reply\nconst orig = $('Extract AI Reply').item.json;\nreturn { json: orig };"
@@ -462,37 +400,6 @@
         2820,
         176
       ]
-    },
-    {
-      "id": "f96cbb7e-6526-40c5-b41d-d1541de9729b_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
     },
     {
       "parameters": {
@@ -620,37 +527,6 @@
       ]
     },
     {
-      "id": "4cf83478-d331-432d-9323-9330faadbc40_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
-    },
-    {
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ { \"reply\": $('Extract AI Reply').item.json.reply, \"handoff\": true, \"agent_joining\": true } }}",
@@ -666,37 +542,6 @@
         3300,
         -48
       ]
-    },
-    {
-      "id": "47b6aff2-1b1f-46c6-8353-5e70f564ac7e_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
     },
     {
       "parameters": {
@@ -731,99 +576,24 @@
       ]
     },
     {
-      "id": "54fc8c78-3c7c-4027-94ad-408385887986_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
       "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/me/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
         "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"recipient\": { \"id\": $('Extract AI Reply').item.json.sender_id }, \"message\": { \"text\": $('Extract AI Reply').item.json.reply } } }}",
+        "options": {}
       },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
-    },
-    {
       "id": "43270979-cd0b-419e-8e0f-f1e477274a8d",
-      "name": "OpenBSP Send WhatsApp Message",
+      "name": "Meta Handoff Reply",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
+      "typeVersion": 4.4,
       "position": [
         3300,
         336
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"type\":\"text\",\"channel_id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"text\":\"={{ $json.reply || $json.message }}\",\"direction\":\"outgoing\"}"
-      },
-      "notes": "Patched by patch-n8n.js — replaces direct Meta Graph API call with OpenBSP unified send endpoint."
-    },
-    {
-      "id": "43270979-cd0b-419e-8e0f-f1e477274a8d_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
+      ]
     },
     {
       "parameters": {
@@ -844,37 +614,6 @@
         3300,
         528
       ]
-    },
-    {
-      "id": "e56c96d4-728d-4948-9dc8-a6f5c04632a9_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
     },
     {
       "parameters": {
@@ -1051,37 +790,24 @@
       ]
     },
     {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/me/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"recipient\": { \"id\": $('Extract AI Reply').item.json.sender_id }, \"message\": { \"text\": $('Extract AI Reply').item.json.reply } } }}",
+        "options": {}
+      },
       "id": "4083b451-2e26-4359-a652-2f899709ce04",
-      "name": "OpenBSP Send WhatsApp Message",
+      "name": "Meta Reply",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
+      "typeVersion": 4.4,
       "position": [
         2820,
         752
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"type\":\"text\",\"channel_id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"text\":\"={{ $json.reply || $json.message }}\",\"direction\":\"outgoing\"}"
-      },
-      "notes": "Patched by patch-n8n.js — replaces direct Meta Graph API call with OpenBSP unified send endpoint."
+      ]
     },
     {
       "parameters": {
@@ -1549,37 +1275,24 @@
       ]
     },
     {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/me/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"recipient\": { \"id\": $('Prepare Feedback Request').item.json.sender_id }, \"message\": { \"text\": $('Prepare Feedback Request').item.json.reply } } }}",
+        "options": {}
+      },
       "id": "27ec0331-da7d-440e-b56c-d846ba4d30d8",
-      "name": "OpenBSP Send WhatsApp Message",
+      "name": "Meta Feedback Reply",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
+      "typeVersion": 4.4,
       "position": [
         -1000,
         440
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"type\":\"text\",\"channel_id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"text\":\"={{ $json.reply || $json.message }}\",\"direction\":\"outgoing\"}"
-      },
-      "notes": "Patched by patch-n8n.js — replaces direct Meta Graph API call with OpenBSP unified send endpoint."
+      ]
     },
     {
       "parameters": {
@@ -1804,6 +1517,127 @@
       "position": [
         1620,
         528
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {},
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.order_intent !== null }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Order Intent"
+            },
+            {
+              "conditions": {
+                "options": {},
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.service_intent !== null }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Service Intent"
+            },
+            {
+              "conditions": {
+                "options": {},
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.booking_intent }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Booking Intent"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "No Intent (GCE Fallback)"
+        }
+      },
+      "id": "l2-intent-router",
+      "name": "L2 Intent Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        900,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BOT_ENGINE_URL || 'http://bot-engine:3001' }}/message",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Internal-Key",
+              "value": "={{ $env.INTERNAL_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"session_id\": $json.session_id, \"message\": $json.text, \"channel\": $json.channel, \"sender_id\": $json.sender_id, \"hotel_slug\": $json.hotel_slug, \"lang\": $json.lang, \"order_intent\": $json.order_intent, \"service_intent\": $json.service_intent, \"booking_intent\": $json.booking_intent } }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "bot-engine-proxy-l2",
+      "name": "Bot Engine Proxy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const botResp = $input.item.json;\nconst reply = botResp.reply || null;\nconst ignored = botResp.ignored || false;\nconst agent_joining = botResp.agent_joining || false;\nconst origData = $('Extract AI Reply').item.json;\nreturn { json: { ...origData, reply: reply, ignored: ignored, agent_joining: agent_joining } };"
+      },
+      "id": "extract-reply-l2",
+      "name": "Extract Bot Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        300
       ]
     }
   ],
@@ -2098,7 +1932,7 @@
       "main": [
         [
           {
-            "node": "Log Message Event",
+            "node": "L2 Intent Router",
             "type": "main",
             "index": 0
           }
@@ -2281,6 +2115,60 @@
           }
         ]
       ]
+    },
+    "L2 Intent Router": {
+      "main": [
+        [
+          {
+            "node": "Bot Engine Proxy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bot Engine Proxy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bot Engine Proxy",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lead Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bot Engine Proxy": {
+      "main": [
+        [
+          {
+            "node": "Extract Bot Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Bot Reply": {
+      "main": [
+        [
+          {
+            "node": "Handoff Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -2293,6 +2181,6 @@
     "templateCredsSetupCompleted": true,
     "instanceId": "d2a9f94e8ff18ebbb23dc0eeacfa23fe29b5024279954537c9be32734e13a314"
   },
-  "id": "zsMnx5KPXjrAnSon",
+  "id": "hcaHotelChatbotWorkflow",
   "tags": []
 }
