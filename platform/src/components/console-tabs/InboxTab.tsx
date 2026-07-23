@@ -293,21 +293,18 @@ export function InboxTab() {
       prev.map((c) => (c.id === selectedConvId ? { ...c, status: "resolved" } : c))
     );
 
-    // For OpenBSP channels, resume the conversation natively
-    if (selectedConv && (selectedConv.channel === "whatsapp" || selectedConv.channel === "instagram")) {
+    if (selectedConv) {
       try {
-        await fetch("/api/conversations/pause", {
+        await fetch("/api/conversations/resolve", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            paused: false,
             session_id: selectedConv.session_id,
-            channel: selectedConv.channel,
-            channel_id: selectedConv.session_id
+            channel: selectedConv.channel
           })
         });
       } catch (err) {
-        console.warn("[Inbox] Failed to resume OpenBSP conversation:", err);
+        console.warn("[Inbox] Failed to clear handoff lock:", err);
       }
     }
   };

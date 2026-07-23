@@ -363,37 +363,6 @@
       ]
     },
     {
-      "id": "8fa3416d-9e39-4cca-892c-655f0e693f30_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
-    },
-    {
       "parameters": {
         "fromEmail": "noreply@youragency.com",
         "toEmail": "={{ $('Extract AI Reply').item.json.hotelInfo && $('Extract AI Reply').item.json.hotelInfo.rep_email || '' }}",
@@ -419,37 +388,6 @@
       "notes": "Configure SMTP credentials in n8n Credentials. Add rep_email row to hotel_info Google Sheet."
     },
     {
-      "id": "f97c5e97-9c46-49d1-b1f7-d3a5156c7749_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
-    },
-    {
       "parameters": {
         "mode": "runOnceForEachItem",
         "jsCode": "// Email node response discarded — restore clean guest data from Extract AI Reply\nconst orig = $('Extract AI Reply').item.json;\nreturn { json: orig };"
@@ -462,37 +400,6 @@
         2820,
         176
       ]
-    },
-    {
-      "id": "f96cbb7e-6526-40c5-b41d-d1541de9729b_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
     },
     {
       "parameters": {
@@ -620,37 +527,6 @@
       ]
     },
     {
-      "id": "4cf83478-d331-432d-9323-9330faadbc40_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
-    },
-    {
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ { \"reply\": $('Extract AI Reply').item.json.reply, \"handoff\": true, \"agent_joining\": true } }}",
@@ -666,37 +542,6 @@
         3300,
         -48
       ]
-    },
-    {
-      "id": "47b6aff2-1b1f-46c6-8353-5e70f564ac7e_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
     },
     {
       "parameters": {
@@ -729,37 +574,6 @@
         3300,
         144
       ]
-    },
-    {
-      "id": "54fc8c78-3c7c-4027-94ad-408385887986_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
     },
     {
       "id": "43270979-cd0b-419e-8e0f-f1e477274a8d",
@@ -795,37 +609,6 @@
       "notes": "Patched by patch-n8n.js — replaces direct Meta Graph API call with OpenBSP unified send endpoint."
     },
     {
-      "id": "43270979-cd0b-419e-8e0f-f1e477274a8d_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
-    },
-    {
       "parameters": {
         "method": "POST",
         "url": "={{ 'https://api.tawk.to/v1/chat/' + $('Extract AI Reply').item.json.sender_id + '/message' }}",
@@ -844,37 +627,6 @@
         3300,
         528
       ]
-    },
-    {
-      "id": "e56c96d4-728d-4948-9dc8-a6f5c04632a9_openbsp_pause",
-      "name": "OpenBSP Pause Conversation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        1100,
-        300
-      ],
-      "parameters": {
-        "method": "PATCH",
-        "url": "{{$env.OPENBSP_API_URL}}/rest/v1/conversations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "api-key",
-              "value": "{{$env.OPENBSP_OWNER_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyContentType": "json",
-        "jsonBody": "{\"id\":\"={{ $json.channel_id || $json.wa_id || $json.ig_id }}\",\"paused\":true}"
-      },
-      "notes": "Patched by patch-n8n.js — pauses the OpenBSP conversation after handoff so the bot stops replying."
     },
     {
       "parameters": {

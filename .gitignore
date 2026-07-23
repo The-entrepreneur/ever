@@ -9,9 +9,15 @@ yarn-debug.log*
 yarn-error.log*
 .npm
 
-# Client env files — contain real secrets
-clients/*/.env
-clients/*/.env.*
+# Environment files — contain real secrets (never commit)
+.env
+.env.*
+*.env
+*.env.*
+**/.env
+**/.env.*
+!**/.env.example
+!**/*.env.example
 
 # Client credentials — Google service accounts, certs, keys
 clients/*/credentials/
@@ -56,11 +62,6 @@ PRD/
 
 # Scratch / temp files — one-off scripts, test data
 scratch/
-
-# Platform env files — contain real keys (SUPABASE, GEMINI, VAPID)
-platform/.env
-platform/.env.*
-!platform/.env.example
 
 # Supabase local dev artefacts
 .supabase/

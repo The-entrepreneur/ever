@@ -5,9 +5,6 @@ const express = require('express');
 const { getSession, setSession } = require('./redis/client');
 const { route, routeHCA } = require('./handlers/router');
 
-// Channels where bot pausing is handled natively by OpenBSP (not Redis)
-const OPENBSP_CHANNELS = new Set(['whatsapp', 'instagram']);
-
 const app = express();
 app.use(express.json());
 
@@ -30,16 +27,12 @@ app.post('/message', async (req, res) => {
       return res.status(400).json({ error: 'session_id and message are required' });
     }
 
-    // Check if Redis handoff lock is active (only applies to non-OpenBSP channels)
-    if (!OPENBSP_CHANNELS.has(channel)) {
-      const { isHandoffActive } = require('./redis/client');
-      const isSilenced = await isHandoffActive(session_id);
-      if (isSilenced) {
-        return res.json({ reply: null, ignored: true, reason: 'handoff_active' });
-      }
+    // Check if handoff lock is active
+    const { isHandoffActive } = require('./redis/client');
+    const isSilenced = await isHandoffActive(session_id);
+    if (isSilenced) {
+      return res.json({ reply: null, ignored: true, reason: 'handoff_active' });
     }
-    // Note: For OpenBSP channels (whatsapp/instagram), the bot pause is controlled
-    // natively by OpenBSP via PATCH /rest/v1/conversations — no Redis check needed.
 
     // Load session from Redis (persists across container restarts)
     let session = await getSession(session_id);
