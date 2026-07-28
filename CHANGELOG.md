@@ -9,7 +9,17 @@ All notable changes to this project, including implementations, rollbacks, audit
 - **Bot Engine Architecture**: Retained the **Redis locking mechanism** for WhatsApp and Instagram handoffs. Reverted a previous attempt to use OpenBSP's native `PATCH /rest/v1/conversations`, which only applies to built-in agents and not webhook architectures (Mode A).
 - **Template Management**: Implemented UI (`AgentSettingsTab.tsx`) and API endpoints (`GET / POST /api/templates`) for Meta HSMs.
 - **Dashboard UI**: Updated `ChannelsTab.tsx` with dedicated OpenBSP Embedded Signup flows for WhatsApp and Instagram. Wired `InboxTab.tsx` resolve button to hit `/api/conversations/resolve` which clears the Redis lock in the Bot Engine.
-- **n8n Workflow Updates**: Created `patch-n8n.js` and successfully patched `gce.json` and `hca.json` to natively use OpenBSP's `/rest/v1/messages`. Retained the existing `Check Handoff Status` logic in n8n.
+- **POS & PMS Integration PRD Alignment**: Rewrote `PRD/POS_Integration_Guide.md` to accurately reflect implementation reality:
+  - Standardized router prefix convention (`prefix="/api/v1/..."` declared per router file, mounted cleanly in `main.py`).
+  - Documented single unified service endpoint `POST /api/v1/services` with `service_type` body parameter (`laundry`, `housekeeping`, `wakeup`, `restaurant`, `other`).
+  - Documented `POSAdapter` interface (`post_folio_charge`) and 4 connection modes (`rest`, `soap`, `webhook`, `fallback`).
+  - Standardized environment variables (`POS_INTEGRATION_TYPE`, `POS_REST_BASE_URL`, `POS_REST_AUTH_HEADER`, `POS_SOAP_WSDL`, `POS_WEBHOOK_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `INTERNAL_API_KEY`).
+  - Outlined full 29-step end-to-end guest journey spanning pre-stay booking (room search, hold, booking creation, payment link generation, confirmation, upsell, lead capture) extending into in-stay POS/HCA ordering and room folio charge posting.
+- **FastAPI POS & Service Endpoints**: Added missing endpoints:
+  - `PATCH /api/v1/orders/{order_id}/status` (Kitchen / staff order status updates).
+  - `GET /api/v1/orders/guest/{session_id}` (Guest order history query).
+  - `GET /api/v1/services/{request_id}` (Service request detail lookup).
+- **Environment Templates & Security Audit**: Created `base/.env.example` master template, updated `platform/.env.example`, and updated `.gitignore` with global `.env` pattern matching for security.
 
 ### Rollbacks
 - **OpenBSP Native Pause Reversion**: Reverted Bot Engine (`handoff.js` & `index.js`), Inbox UI (`InboxTab.tsx`), and n8n scripts (`patch-n8n.js`) back to relying entirely on the Redis `handoff:{session_id}` lock for conversation state management, after confirming OpenBSP native pauses do not apply to webhook deployments.

@@ -199,3 +199,67 @@ async def get_order(order_id: str, db: AsyncSession = Depends(get_db)):
         "folio_posted": row[3],
         "created_at":  str(row[4]),
     }
+
+
+# ─── Update order status endpoint ───────────────────────────────────────────────
+
+@router.patch("/{order_id}/status")
+async def update_order_status(
+    order_id: str,
+    status:   str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Called by kitchen or dashboard staff to update order preparation status.
+    status options: pending | preparing | ready | delivered | cancelled
+    """
+    valid = {"pending", "preparing", "ready", "delivered", "cancelled"}
+    if status not in valid:
+        raise HTTPException(status_code=400, detail=f"status must be one of: {valid}")
+
+    now = datetime.now(timezone.utc).isoformat()
+    result = await db.execute(
+        text("""
+            UPDATE orders
+            SET status=:status, updated_at=:now
+            WHERE id=:id
+            RETURNING id, status
+        """),
+        {"id": order_id, "status": status, "now": now},
+    )
+    row = result.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    await db.commit()
+    return {"order_id": str(row[0]), "status": row[1]}
+
+
+# ─── Get guest orders endpoint ──────────────────────────────────────────────────
+
+@router.get("/guest/{session_id}")
+async def get_guest_orders(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Returns all orders associated with a guest session."""
+    result = await db.execute(
+        text("""
+            SELECT id, room_number, items, total_amount, status, folio_posted, created_at
+            FROM orders
+            WHERE session_id = :session_id
+            ORDER BY created_at DESC
+        """),
+        {"session_id": session_id},
+    )
+    rows = result.fetchall()
+    return [
+        {
+            "order_id":     str(r[0]),
+            "room_number":  r[1],
+            "items":        r[2],
+            "total_amount": float(r[3]),
+            "status":       r[4],
+            "folio_posted": r[5],
+            "created_at":  str(r[6]),
+        }
+        for r in rows
+    ]
+
