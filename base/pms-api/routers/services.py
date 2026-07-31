@@ -203,3 +203,35 @@ async def update_service_status(
 
     await db.commit()
     return {"id": str(row[0]), "status": row[1]}
+
+
+# ─── Get service request detail endpoint ───────────────────────────────────────
+
+@router.get("/{request_id}")
+async def get_service_request(request_id: str, db: AsyncSession = Depends(get_db)):
+    """Returns status and details of a service request by UUID."""
+    result = await db.execute(
+        text("""
+            SELECT id, hotel_slug, session_id, room_number, service_type,
+                   details, scheduled_for, status, created_at
+            FROM service_requests
+            WHERE id = :id
+        """),
+        {"id": request_id},
+    )
+    row = result.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Service request not found")
+
+    return {
+        "id":            str(row[0]),
+        "hotel_slug":    row[1],
+        "session_id":    row[2],
+        "room_number":   row[3],
+        "service_type":  row[4],
+        "details":       row[5],
+        "scheduled_for": str(row[6]) if row[6] else None,
+        "status":        row[7],
+        "created_at":    str(row[8]),
+    }
+
