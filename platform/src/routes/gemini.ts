@@ -4,7 +4,7 @@ import { getAiClient } from '../lib/globals.js';
 const router = Router();
 
   // API Route for Gemini Chat
-  router.post("/api/gemini/chat", async (req, res) => {
+  router.post("/chat", async (req, res) => {
     try {
       const { prompt, history } = req.body;
       if (!prompt) {
@@ -13,7 +13,7 @@ const router = Router();
 
       const systemInstruction = 
         "You are Ellie, the Ever virtual onboarding partner and support architect. " +
-        "You help users (hotel managers, hospitality operators, and partners) navigate technical documentation, set up Property Management System (PMS) integrations like Cloudbeds, Mews, and Opera, configure messaging channels like WhatsApp, and understand native payment ledgers.\n\n" +
+        "You help users (hotel managers, hospitality operators, and partners) navigate technical documentation, set up Property Management System (PMS) integrations between EVER and with other PMS, POS and other hospitality apps and tools like Cloudbeds, Mews, Opera and many more, configure messaging channels like WhatsApp, and understand native payment ledgers.\n\n" +
         "FORMATTING INSTRUCTIONS:\n" +
         "1. ALWAYS structure your output beautifully using paragraphs, bold headers, and clean lists. Avoid long dense chunks of text; separate logical ideas with dual newlines so there is generous breathing space.\n" +
         "2. Use bolding (**bold text**) for key concepts, but do so selectively to keep reading comfortable.\n" +
@@ -74,7 +74,7 @@ const router = Router();
   });
 
   // API Route for Interactive Hotel Demo Sandbox Chat
-  router.post("/api/gemini/demo-chat", async (req, res) => {
+  router.post("/demo-chat", async (req, res) => {
     try {
       const { prompt, history, level, hotelId, isHumanAgent } = req.body;
       if (!prompt) {
