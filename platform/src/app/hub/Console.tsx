@@ -28,7 +28,7 @@ import {
   CreditCard,
   Bell
 } from "lucide-react";
-import { useTheme } from "./ThemeProvider";
+import { useTheme } from "../../shared/ThemeProvider";
 
 import { DashboardTab } from "./console-tabs/DashboardTab";
 import { InboxTab } from "./console-tabs/InboxTab";

@@ -1,5 +1,5 @@
 import React from "react";
-import { useCurrency } from "../context/CurrencyContext";
+import { useCurrency } from "../../context/CurrencyContext";
 import { ArrowRightLeft } from "lucide-react";
 
 export function CurrencyToggle({ className = "" }: { className?: string }) {

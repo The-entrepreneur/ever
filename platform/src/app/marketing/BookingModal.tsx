@@ -9,7 +9,7 @@ import {
   fetchCalendarBusySlots, 
   createGoogleCalendarEvent, 
   CalendarEventInput 
-} from '../utils/googleCalendar';
+} from "../../utils/googleCalendar";
 
 interface BookingModalProps {
   isOpen: boolean;

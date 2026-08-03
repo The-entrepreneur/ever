@@ -5,7 +5,7 @@ import {
   Sun, Moon, LogOut, PanelLeftClose, PanelLeftOpen, Search, Building2, ChevronDown,
   ShieldAlert, Menu, X, HelpCircle, DollarSign, Palette, Blocks, Calendar
 } from "lucide-react";
-import { useTheme } from "./ThemeProvider";
+import { useTheme } from "../../shared/ThemeProvider";
 
 import { AgencyDashboardTab } from "./admin-tabs/AgencyDashboardTab";
 import { ClientManagementTab } from "./admin-tabs/ClientManagementTab";

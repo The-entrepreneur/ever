@@ -7,7 +7,7 @@ import {
   initiateGoogleOAuth, 
   logoutGoogle, 
   checkAndSaveAccessToken 
-} from "../../utils/googleCalendar";
+} from "../../../utils/googleCalendar";
 
 export function CalendarSettingsTab() {
   const [token, setToken] = useState<string | null>(null);
