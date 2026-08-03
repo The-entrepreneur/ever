@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Bell, ArrowRight } from "lucide-react";
 import { DemoHero } from "./DemoHero";
 import { ExperienceConfiguration } from "./ExperienceConfiguration";
-import { ExperienceConsole } from "./ExperienceConsole";
+import { ExperienceConsole } from "../hub/ExperienceConsole";
 import { CapabilityHighlights } from "./CapabilityHighlights";
 import { OperationalCards } from "./OperationalCards";
 

@@ -18,7 +18,7 @@ import { RevenueTab } from "./admin-tabs/RevenueTab";
 import { AgencyComplianceTab } from "./admin-tabs/AgencyComplianceTab";
 import { BrandingTab } from "./admin-tabs/BrandingTab";
 import { CalendarSettingsTab } from "./admin-tabs/CalendarSettingsTab";
-import { checkAndSaveAccessToken } from "../utils/googleCalendar";
+import { checkAndSaveAccessToken } from "../../utils/googleCalendar";
 
 const PlaceholderTab = ({ title, description }: { title: string, description: string }) => (
   <div className="p-6 md:p-8 flex flex-col items-center justify-center h-full text-center">
