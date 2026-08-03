@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, ArrowRight, ChevronDown, Sparkles } from "lucide-react";
-import { EverLogo } from "./EverLogo";
+import { EverLogo } from "../../shared/EverLogo";
 import { InteractiveButton } from "./InteractiveButton";
 import { CurrencyToggle } from "./CurrencyToggle";
 

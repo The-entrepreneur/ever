@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronLeft, Eye, EyeOff } from "lucide-react";
-import { EverLogo } from "./EverLogo";
+import { EverLogo } from "../../shared/EverLogo";
+import { supabase } from "../../lib/supabase";
 
 const GeometricPattern = () => {
   return (
@@ -32,25 +33,43 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
       setSuccess(true);
+      
+      // Navigate based on role metadata
       setTimeout(() => {
-        if (form.email.includes("admin") || form.email.includes("agency")) {
+        const role = data.user.user_metadata?.role || "hotel_receptionist";
+        if (role === "super_admin" || role === "agency_staff") {
           navigate("/agency");
         } else {
           navigate("/console");
         }
       }, 1000);
-    }, 1200);
+      
+    } catch (err: any) {
+      setError(err.message || "Failed to log in");
+      setLoading(false);
+    }
   };
 
   return (
@@ -88,6 +107,12 @@ export function LoginPage() {
                       <Link to="/signup" className="font-semibold text-zinc-900 underline hover:no-underline">Create a free account</Link> or log in to get started using Ever
                     </p>
                   </div>
+
+                  {error && (
+                    <div className="mb-6 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100">
+                      {error}
+                    </div>
+                  )}
 
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="space-y-2">

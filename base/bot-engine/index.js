@@ -73,6 +73,51 @@ app.post('/message', async (req, res) => {
   }
 });
 
+// ── OpenBSP Webhook Gateway (Decoupled n8n Router) ───────────
+app.post('/api/webhook/openbsp', async (req, res) => {
+  try {
+    const hotelSlug = process.env.HOTEL_SLUG;
+    const { isSubscriptionActive } = require('./services/subscription');
+
+    // 1. Check if the tenant's subscription is active in Supabase
+    const isActive = await isSubscriptionActive(hotelSlug);
+    if (!isActive) {
+      console.warn(`[BotEngine Gateway] Blocked OpenBSP webhook for ${hotelSlug} — subscription inactive or not found.`);
+      // Return 200 to OpenBSP so it doesn't retry endlessly; message is intentionally dropped.
+      return res.status(200).json({ blocked: true, reason: 'subscription_inactive' });
+    }
+
+    // 2. Trim massive payload context to prevent n8n memory bloat
+    let payload = req.body;
+    if (payload && Array.isArray(payload.messages)) {
+      // Keep only the latest 10 messages in the context window
+      payload.messages = payload.messages.slice(-10);
+    }
+
+    // 3. Forward the optimized payload to the internal n8n container
+    const n8nUrl = `http://n8n_${hotelSlug}:5678/webhook/hotel-chatbot`;
+    const response = await fetch(n8nUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      console.error(`[BotEngine Gateway] n8n responded with status ${response.status}`);
+      // Fail gracefully so OpenBSP retries if n8n is temporarily down
+      return res.status(502).json({ error: 'n8n upstream error' });
+    }
+
+    // Pass the n8n JSON response back to OpenBSP
+    const responseData = await response.json().catch(() => ({}));
+    return res.json(responseData);
+
+  } catch (err) {
+    console.error('[BotEngine Gateway] Error forwarding to n8n:', err.message);
+    return res.status(500).json({ error: 'Gateway forwarding failed' });
+  }
+});
+
 // ── Handoff endpoints ─────────────────────────────────────────
 const handoffHandler = require('./handlers/handoff');
 app.post('/handoff', (req, res) => handoffHandler.initiateHandoff(req, res));

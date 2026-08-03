@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronLeft, Eye, EyeOff } from "lucide-react";
+import { supabase } from "../../lib/supabase";
 
 const GeometricPattern = () => {
   return (
@@ -31,6 +32,7 @@ export function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -43,17 +45,43 @@ export function SignUpPage() {
     password: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    localStorage.setItem("ever_signup_form", JSON.stringify(form));
-    setTimeout(() => {
-      setLoading(false);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            first_name: form.firstName,
+            last_name: form.lastName,
+            full_name: `${form.firstName} ${form.lastName}`,
+            mobile_number: form.mobileNumber,
+            business_name: form.businessName,
+            business_role: form.role,
+            address: form.address,
+            property_type: form.propertyType,
+            role: "hotel_manager" // Default role for new self-serve signups
+          }
+        }
+      });
+
+      if (error) throw error;
+
       setSuccess(true);
       setTimeout(() => {
+        // If email confirmation is off, they might be logged in already.
+        // Directing to login is safest.
         navigate("/login");
-      }, 1500);
-    }, 1500);
+      }, 2000);
+      
+    } catch (err: any) {
+      setError(err.message || "Failed to create account");
+      setLoading(false);
+    }
   };
 
   return (
@@ -91,6 +119,12 @@ export function SignUpPage() {
                       Create a free account or <Link to="/login" className="font-semibold text-zinc-900 underline hover:no-underline">log in</Link> to get started using Ever
                     </p>
                   </div>
+
+                  {error && (
+                    <div className="mb-6 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100">
+                      {error}
+                    </div>
+                  )}
 
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -242,7 +276,7 @@ export function SignUpPage() {
                     </svg>
                   </div>
                   <h3 className="text-xl font-semibold text-zinc-900">Account Created</h3>
-                  <p className="text-sm text-zinc-500">Redirecting you to login...</p>
+                  <p className="text-sm text-zinc-500">Please check your email to verify your account, or log in.</p>
                 </motion.div>
               )}
             </AnimatePresence>

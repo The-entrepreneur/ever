@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { InteractiveButton } from "./InteractiveButton";
-import { useCurrency } from "../context/CurrencyContext";
+import { useCurrency } from "../../context/CurrencyContext";
 import { MarginCalculator } from "./MarginCalculator";
 
 export function Pricing() {

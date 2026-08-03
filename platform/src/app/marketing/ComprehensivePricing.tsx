@@ -2,7 +2,7 @@ import { motion } from "motion/react";
 import { InteractiveButton } from "./InteractiveButton";
 import { Check, X, Building2, ArrowRight } from "lucide-react";
 import { MarginCalculator } from "./MarginCalculator";
-import { useCurrency } from "../context/CurrencyContext";
+import { useCurrency } from "../../context/CurrencyContext";
 
 export function ComprehensivePricing() {
   const { formatMoney } = useCurrency();

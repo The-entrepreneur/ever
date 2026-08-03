@@ -32,7 +32,7 @@ import {
   BarChart,
   Cpu
 } from "lucide-react";
-import { integrationsData } from "../data/integrationsData";
+import { integrationsData } from "../../data/integrationsData";
 
 // Types
 export type IntegrationCategory = "All" | "Channel integrations" | "PMS" | "POS" | "CRM" | "Payments & Accounting" | "Analytics" | "LLM APIs" | "Other";

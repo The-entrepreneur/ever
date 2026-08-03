@@ -4,6 +4,12 @@ All notable changes to this project, including implementations, rollbacks, audit
 
 ## [Unreleased]
 ### Implementations
+- **Subscription Enforcement in Gateway**: Created `base/bot-engine/services/subscription.js` to perform a live Supabase Postgres check on `subscriptions.status` per hotel slug. The gateway now returns `200 {blocked: true}` (not 402) on inactive subs so OpenBSP stops retrying silently. Falls open on DB error to avoid blocking live messages during outages.
+- **Webhook Gateway & n8n Decoupling**: Decoupled OpenBSP webhooks from n8n by routing `/api/webhook/openbsp` to `bot-engine`. The bot-engine forwards payloads trimmed to the last 10 messages to the internal n8n containers (`n8n_${HOTEL_SLUG}:5678`), preventing webhook disconnections when n8n workflows are deactivated.
+- **N8n Execution Memory Protection**: Added `EXECUTIONS_DATA_SAVE_ON_SUCCESS=none` to GCE and HCA docker-compose files to prevent n8n's SQLite database from crashing due to large conversation payloads.
+- **Tier Migration & Subscriptions Layer**: Added `002_subscriptions.sql` migration for Supabase to handle tier (gce, hca) and billing status (active, past_due).
+- **Architecture File Renaming**: Standardized template and docker-compose names from `.level1` / `.level2` to `.gce` / `.hca` across the repository and updated `new-client.sh` to enforce `BOT_PORT` uniformly.
+- **Sheets Deprecation**: Removed Google Sheets credentials from environment templates, fully migrating to Supabase as the data layer foundation for future dynamic integrations.
 - **OpenBSP Integration Architecture Switch**: Unified architecture for WhatsApp and Instagram using OpenBSP API natively for sending messages (via n8n patches).
 - **Backend Refactoring**: Extracted all monolithic endpoints from `server.ts` to a dedicated `platform/src/routes/` structure (e.g., `channels.ts`, `orders.ts`, `templates.ts`, `conversations.ts`, etc.).
 - **Bot Engine Architecture**: Retained the **Redis locking mechanism** for WhatsApp and Instagram handoffs. Reverted a previous attempt to use OpenBSP's native `PATCH /rest/v1/conversations`, which only applies to built-in agents and not webhook architectures (Mode A).

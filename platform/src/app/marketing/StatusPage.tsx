@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Check, CheckCircle2, ChevronRight, Settings, Info, AlertTriangle, HelpCircle } from "lucide-react";
-import { EverLogo } from "./EverLogo";
+import { EverLogo } from "../../shared/EverLogo";
 
 interface StatusService {
   name: string;

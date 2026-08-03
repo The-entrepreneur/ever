@@ -68,3 +68,6 @@ scratch/
 
 # .agents/skills — TRACK THIS (needed on every cloned machine)
 # Do NOT add .agents/ to gitignore
+
+# One-time refactor/migration scripts — not part of the codebase
+*.cjs

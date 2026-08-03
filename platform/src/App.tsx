@@ -5,38 +5,40 @@
 
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useEffect } from "react";
-import { ThemeProvider, useTheme } from "./components/ThemeProvider";
+import { ThemeProvider, useTheme } from "./shared/ThemeProvider";
 import { CurrencyProvider } from "./context/CurrencyContext";
-import { Navbar } from "./components/Navbar";
-import { Hero } from "./components/Hero";
-import { ProblemMatrix } from "./components/ProblemMatrix";
-import { PerfectSync } from "./components/PerfectSync";
-import { SolutionLayer } from "./components/SolutionLayer";
-import { MergedInfrastructure } from "./components/MergedInfrastructure";
-import { OperationalTransition } from "./components/OperationalTransition";
-import { Pricing } from "./components/Pricing";
-import { ROISection } from "./components/ROISection";
-import { TrustFAQ } from "./components/TrustFAQ";
-import { CallToAction } from "./components/CallToAction";
-import { Footer } from "./components/Footer";
-import { RevenueIntelligence } from "./components/RevenueIntelligence";
-import { Integrations } from "./components/Integrations";
-import { About } from "./components/About";
-import { Terms } from "./components/Terms";
-import { Privacy } from "./components/Privacy";
-import { HelpDesk } from "./components/HelpDesk";
-import { StatusPage } from "./components/StatusPage";
-import { SignUpPage } from "./components/SignUpPage";
-import { LoginPage } from "./components/LoginPage";
-import { SupportGuide } from "./components/SupportGuide";
-import { GuestConcierge } from "./components/GuestConcierge";
-import { CommerceAgent } from "./components/CommerceAgent";
-import { UseCases } from "./components/UseCases";
-import { ComprehensivePricing } from "./components/ComprehensivePricing";
-import { Console } from "./components/Console";
-import { AssistantWidget } from "./components/AssistantWidget";
-import { InteractiveDemo } from "./components/InteractiveDemo";
-import { AdminConsole } from "./components/AdminConsole";
+import { AuthProvider } from "./context/AuthContext";
+import { ProtectedRoute } from "./shared/ProtectedRoute";
+import { Navbar } from "./app/marketing/Navbar";
+import { Hero } from "./app/marketing/Hero";
+import { ProblemMatrix } from "./app/marketing/ProblemMatrix";
+import { PerfectSync } from "./app/marketing/PerfectSync";
+import { SolutionLayer } from "./app/marketing/SolutionLayer";
+import { MergedInfrastructure } from "./app/marketing/MergedInfrastructure";
+import { OperationalTransition } from "./app/marketing/OperationalTransition";
+import { Pricing } from "./app/marketing/Pricing";
+import { ROISection } from "./app/marketing/ROISection";
+import { TrustFAQ } from "./app/marketing/TrustFAQ";
+import { CallToAction } from "./app/marketing/CallToAction";
+import { Footer } from "./app/marketing/Footer";
+import { RevenueIntelligence } from "./app/marketing/RevenueIntelligence";
+import { Integrations } from "./app/marketing/Integrations";
+import { About } from "./app/marketing/About";
+import { Terms } from "./app/marketing/Terms";
+import { Privacy } from "./app/marketing/Privacy";
+import { HelpDesk } from "./app/marketing/HelpDesk";
+import { StatusPage } from "./app/marketing/StatusPage";
+import { SignUpPage } from "./app/auth/SignUpPage";
+import { LoginPage } from "./app/auth/LoginPage";
+import { SupportGuide } from "./app/marketing/SupportGuide";
+import { GuestConcierge } from "./app/marketing/GuestConcierge";
+import { CommerceAgent } from "./app/marketing/CommerceAgent";
+import { UseCases } from "./app/marketing/UseCases";
+import { ComprehensivePricing } from "./app/marketing/ComprehensivePricing";
+import { Console } from "./app/hub/Console";
+import { AssistantWidget } from "./app/marketing/AssistantWidget";
+import { InteractiveDemo } from "./app/marketing/InteractiveDemo";
+import { AdminConsole } from "./app/admin/AdminConsole";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -150,8 +152,16 @@ function AppLayout() {
         <Route path="/status" element={<StatusPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/console" element={<Console />} />
-        <Route path="/agency" element={<AdminConsole />} />
+        <Route path="/console" element={
+          <ProtectedRoute allowedRoles={["hotel_manager", "hotel_receptionist"]}>
+            <Console />
+          </ProtectedRoute>
+        } />
+        <Route path="/agency" element={
+          <ProtectedRoute allowedRoles={["super_admin", "agency_staff"]}>
+            <AdminConsole />
+          </ProtectedRoute>
+        } />
         <Route path="/demo" element={<InteractiveDemo />} />
         <Route path="/support-guide" element={<SupportGuide />} />
         <Route path="*" element={<UnfinishedPage />} />
@@ -166,11 +176,13 @@ export default function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="ever-theme">
       <CurrencyProvider>
-        <BrowserRouter>
-          <ScrollToTop />
-          <PageTitle />
-          <AppLayout />
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter>
+            <ScrollToTop />
+            <PageTitle />
+            <AppLayout />
+          </BrowserRouter>
+        </AuthProvider>
       </CurrencyProvider>
     </ThemeProvider>
   );

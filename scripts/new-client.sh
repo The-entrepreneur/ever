@@ -37,9 +37,9 @@ if [ "$PACKAGE" != "gce" ] && [ "$PACKAGE" != "hca" ]; then
     exit 1
 fi
 
-if [ "$PACKAGE" == "hca" ] && [ -z "$BOT_PORT" ]; then
-    echo -e "${ERROR} HCA requires a bot-engine port!"
-    echo "Usage: $0 <client-slug> hca <n8n-port> <bot-engine-port>"
+if [ -z "$BOT_PORT" ]; then
+    echo -e "${ERROR} A bot-engine port is required for all tiers!"
+    echo "Usage: $0 <client-slug> <gce|hca> <n8n-port> <bot-engine-port>"
     exit 1
 fi
 
@@ -55,11 +55,11 @@ mkdir -p "${CLIENT_DIR}/credentials"
 
 # ── Copy config templates ─────────────────────────────────────
 if [ "$PACKAGE" == "gce" ]; then
-    cp "${BASE_DIR}/base/templates/.env.level1.example" "${CLIENT_DIR}/.env"
-    cp "${BASE_DIR}/base/docker/docker-compose.level1.yml" "${CLIENT_DIR}/docker-compose.yml"
+    cp "${BASE_DIR}/base/templates/.env.gce.example" "${CLIENT_DIR}/.env"
+    cp "${BASE_DIR}/base/docker/docker-compose.gce.yml" "${CLIENT_DIR}/docker-compose.yml"
 else
-    cp "${BASE_DIR}/base/templates/.env.level2.example" "${CLIENT_DIR}/.env"
-    cp "${BASE_DIR}/base/docker/docker-compose.level2.yml" "${CLIENT_DIR}/docker-compose.yml"
+    cp "${BASE_DIR}/base/templates/.env.hca.example" "${CLIENT_DIR}/.env"
+    cp "${BASE_DIR}/base/docker/docker-compose.hca.yml" "${CLIENT_DIR}/docker-compose.yml"
 fi
 
 # ── Copy default data files ───────────────────────────────────
@@ -73,17 +73,16 @@ sed -i "s/HOTEL_SLUG=grand-horizon/HOTEL_SLUG=${SLUG}/g"           "${CLIENT_DIR
 sed -i "s/N8N_PORT=5679/N8N_PORT=${N8N_PORT}/g"                    "${CLIENT_DIR}/.env"
 sed -i "s/grand-horizon.youragency.com/${SLUG}.youragency.com/g"   "${CLIENT_DIR}/.env"
 
-if [ "$PACKAGE" == "hca" ]; then
-    sed -i "s/BOT_ENGINE_PORT=3001/BOT_ENGINE_PORT=${BOT_PORT}/g"  "${CLIENT_DIR}/.env"
-    RAND_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-    sed -i "s/generate_strong_random_key_min_32_chars/${RAND_KEY}/g" "${CLIENT_DIR}/.env"
-fi
+sed -i "s/BOT_ENGINE_PORT=3001/BOT_ENGINE_PORT=${BOT_PORT}/g" "${CLIENT_DIR}/.env"
+RAND_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+sed -i "s/generate_strong_random_key_min_32_chars/${RAND_KEY}/g" "${CLIENT_DIR}/.env"
 
 # ── Nginx config ──────────────────────────────────────────────
 NGINX_CONF="${BASE_DIR}/nginx/${SLUG}.conf"
 cp "${BASE_DIR}/base/templates/nginx.conf.example" "${NGINX_CONF}"
 sed -i "s/CLIENT_SLUG/${SLUG}/g"  "${NGINX_CONF}"
 sed -i "s/CLIENT_PORT/${N8N_PORT}/g" "${NGINX_CONF}"
+sed -i "s/BOT_ENGINE_PORT/${BOT_PORT}/g" "${NGINX_CONF}"
 
 echo -e "${SUCCESS} Scaffolding complete for ${SLUG}."
 
@@ -116,7 +115,7 @@ else
             \"name\": \"${SLUG}\",
             \"service\": \"whatsapp\",
             \"expires_at\": \"2027-12-31T00:00:00Z\",
-            \"callback_url\": \"https://${SLUG}.youragency.com/webhook/hotel-chatbot\",
+            \"callback_url\": \"https://${SLUG}.youragency.com/api/webhook/openbsp\",
             \"verify_token\": \"${VERIFY_TOKEN}\"
         }" 2>&1)
 

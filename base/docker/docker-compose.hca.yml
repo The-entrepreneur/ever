@@ -25,6 +25,8 @@ services:
       - WEBHOOK_URL=${WEBHOOK_BASE_URL}
       - GENERIC_TIMEZONE=Europe/London
       - N8N_LOG_LEVEL=info
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=none
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
     volumes:
       - n8n_data_${HOTEL_SLUG}:/home/node/.n8n
       - ./data/faq.json:/home/node/data/faq.json:ro

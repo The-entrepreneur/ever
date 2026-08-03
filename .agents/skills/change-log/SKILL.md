@@ -31,8 +31,17 @@ Document planned future changes, upcoming features, or subsequent implementation
 
 ## Usage Guidelines
 
-To effectively utilize this skill, maintain change log entries in a structured format, preferably Markdown or JSON, within a dedicated file (e.g., `CHANGELOG.md` or `changelog.json`) in the project directory. When adding new entries, ensure they are concise yet comprehensive, providing sufficient context for future reference. When querying the log, specify the type of information needed (e.g., "all implementations in the last month," "details of rollback X").
+To effectively utilize this skill, you MUST maintain and update both `CHANGELOG.md` and `NEXT_STEPS.md` consistently whenever the project state changes. 
+
+1. **CHANGELOG.md**: Maintain a structured Markdown file to record all implementations, rollbacks, and historical changes. Provide sufficient context for future reference (e.g., date, what was changed, why).
+2. **NEXT_STEPS.md**: Maintain a living roadmap tracking upcoming phases, actionable tasks, and pending features. 
+
+**Critical Rule:** Whenever a task is completed, you must:
+- Move the item from `NEXT_STEPS.md` (Pending) to `NEXT_STEPS.md` (Completed) or remove it if no longer relevant.
+- Add an entry to `CHANGELOG.md` detailing the implemented change.
 
 ## Resources
 
-This skill will leverage a `changelog.md` file within the project directory to store all change log entries. Future enhancements may include scripts for automated entry generation or reporting.
+This skill will leverage two primary files within the project root directory:
+- `CHANGELOG.md`: For storing all historical change log entries.
+- `NEXT_STEPS.md`: For tracking the roadmap and upcoming phases.

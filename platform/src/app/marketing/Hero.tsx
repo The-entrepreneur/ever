@@ -18,7 +18,7 @@ import {
 import { useState } from "react";
 import { AnimatedChat } from "./AnimatedChat";
 import { InteractiveButton } from "./InteractiveButton";
-import { useCurrency } from "../context/CurrencyContext";
+import { useCurrency } from "../../context/CurrencyContext";
 
 export function Hero() {
   const { formatMoney } = useCurrency();

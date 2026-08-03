@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { EverLogo } from "./EverLogo";
+import { EverLogo } from "../../shared/EverLogo";
 import { ArrowRight, Mail, Check } from "lucide-react";
 import { InteractiveButton } from "./InteractiveButton";
 
