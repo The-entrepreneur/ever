@@ -3,6 +3,8 @@ import {
   MessageSquare, Search, Phone, Mail, User,
   AlertCircle, Send, RefreshCw, Wifi, WifiOff, CheckCircle2, Clock
 } from "lucide-react";
+import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../context/AuthContext";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Conversation {
@@ -164,6 +166,7 @@ function StatusChip({ status, handoff }: { status: string; handoff: boolean }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function InboxTab() {
+  const { hotelId } = useAuth();
   const [activeFilter, setActiveFilter] = useState("All");
   const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(MOCK_CONVERSATIONS[0].id);
@@ -175,86 +178,94 @@ export function InboxTab() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Try to connect to Supabase Realtime
+  // Load conversations and subscribe to Realtime updates
   useEffect(() => {
-    let cleanup: (() => void) | null = null;
-
-    const initRealtime = async () => {
+    const loadConversations = async () => {
       try {
-        const { createClient } = await import("@supabase/supabase-js");
-        const url = (import.meta as any).env?.VITE_SUPABASE_URL;
-        const key = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
-        if (!url || !key) return;
-
-        const supabase = createClient(url, key);
-
-        // Load real conversations
-        const { data: convData } = await supabase
+        let query = supabase
           .from("conversations")
           .select("*")
           .order("last_message_at", { ascending: false })
           .limit(50);
 
-        if (convData && convData.length > 0) {
+        // Scope to hotel if available
+        if (hotelId) query = query.eq("hotel_id", hotelId);
+
+        const { data: convData, error } = await query;
+
+        if (!error && convData && convData.length > 0) {
           setConversations(convData as Conversation[]);
           setSelectedConvId(convData[0].id);
           setIsRealtime(true);
         }
-
-        // Subscribe to new conversations
-        const channel = supabase
-          .channel("inbox_realtime")
-          .on(
-            "postgres_changes",
-            { event: "*", schema: "public", table: "conversations" },
-            (payload) => {
-              if (payload.eventType === "INSERT") {
-                setConversations((prev) => [payload.new as Conversation, ...prev]);
-              } else if (payload.eventType === "UPDATE") {
-                setConversations((prev) =>
-                  prev.map((c) => (c.id === (payload.new as Conversation).id ? (payload.new as Conversation) : c))
-                );
-              }
-            }
-          )
-          .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: "messages" },
-            (payload) => {
-              const msg = payload.new as Message;
-              setMessages((prev) => {
-                if (msg.conversation_id === selectedConvId) {
-                  return [...prev, msg];
-                }
-                return prev;
-              });
-            }
-          )
-          .subscribe();
-
-        cleanup = () => supabase.removeChannel(channel);
       } catch (err) {
-        console.warn("[Inbox] Realtime unavailable, using local simulation:", err);
+        console.warn("[Inbox] Failed to load conversations, using mock data:", err);
       }
     };
 
-    initRealtime();
-    return () => cleanup?.();
-  }, []);
+    loadConversations();
+
+    // Realtime: subscribe to conversation and message changes
+    const filter = hotelId ? `hotel_id=eq.${hotelId}` : undefined;
+    const channelOpts: any = { event: "*", schema: "public", table: "conversations" };
+    if (filter) channelOpts.filter = filter;
+
+    const realtimeChannel = supabase
+      .channel("inbox_realtime")
+      .on("postgres_changes", channelOpts, (payload) => {
+        if (payload.eventType === "INSERT") {
+          setConversations((prev) => [payload.new as Conversation, ...prev]);
+        } else if (payload.eventType === "UPDATE") {
+          setConversations((prev) =>
+            prev.map((c) => (c.id === (payload.new as Conversation).id ? (payload.new as Conversation) : c))
+          );
+        }
+      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const msg = payload.new as Message;
+          setMessages((prev) => {
+            if (msg.conversation_id === selectedConvId) return [...prev, msg];
+            return prev;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(realtimeChannel); };
+  }, [hotelId]);
 
   // Load messages when selected conversation changes
   useEffect(() => {
     if (!selectedConvId) return;
     setIsLoading(true);
-
-    // Use mock data if Supabase isn't available
-    const mockMsgs = MOCK_MESSAGES[selectedConvId] || [];
-    setTimeout(() => {
-      setMessages(mockMsgs);
-      setIsLoading(false);
-    }, 120);
-
     setAgentMode(false);
+
+    const loadMessages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("conversation_id", selectedConvId)
+          .order("created_at", { ascending: true })
+          .limit(100);
+
+        if (!error && data && data.length > 0) {
+          setMessages(data as Message[]);
+        } else {
+          // Fall back to mock data for development
+          setMessages(MOCK_MESSAGES[selectedConvId] || []);
+        }
+      } catch {
+        setMessages(MOCK_MESSAGES[selectedConvId] || []);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadMessages();
   }, [selectedConvId]);
 
   // Auto scroll
