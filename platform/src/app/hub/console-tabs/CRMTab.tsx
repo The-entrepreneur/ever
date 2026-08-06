@@ -1,23 +1,33 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Search, Download, Filter, Eye, CheckCircle, RefreshCw, AlertCircle, Phone, Mail, FileText } from "lucide-react";
+import { Search, Download, Filter, Eye, CheckCircle, RefreshCw, AlertCircle, Phone, Mail, FileText, Calendar, Users, Target } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../context/AuthContext";
+import { Modal } from "../../../shared/Modal";
+import { useToast } from "../../../shared/ToastContext";
 
-interface Guest {
+interface Lead {
   id: string;
   name: string;
   email: string | null;
   phone: string | null;
   created_at: string;
-  contacted_status: string | null;
+  status: string | null;
+  lead_quality: number | null;
+  check_in?: string | null;
+  check_out?: string | null;
+  guests?: number | null;
+  purpose?: string | null;
+  channel?: string | null;
 }
 
 export function CRMTab() {
   const { hotelId } = useAuth();
-  const [guests, setGuests] = useState<Guest[]>([]);
+  const { showToast } = useToast();
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All"); // All, Action Needed, Contacted, Booked, Lost
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   
   // Pagination
   const [page, setPage] = useState(0);
@@ -30,7 +40,7 @@ export function CRMTab() {
 
     try {
       let query = supabase
-        .from("guests")
+        .from("leads")
         .select("*", { count: "exact" })
         .eq("hotel_id", hotelId)
         .order("created_at", { ascending: false });
@@ -41,9 +51,9 @@ export function CRMTab() {
 
       if (statusFilter !== "All") {
         if (statusFilter === "Action Needed") {
-          query = query.is("contacted_status", null);
+          query = query.eq("status", "captured");
         } else {
-          query = query.eq("contacted_status", statusFilter.toLowerCase());
+          query = query.eq("status", statusFilter.toLowerCase());
         }
       }
 
@@ -53,7 +63,7 @@ export function CRMTab() {
       const { data, count, error } = await query;
       
       if (!error && data) {
-        setGuests(data as Guest[]);
+        setLeads(data as Lead[]);
         setTotalCount(count ?? 0);
       }
     } catch (err) {
@@ -67,35 +77,41 @@ export function CRMTab() {
     fetchGuests();
   }, [fetchGuests]);
 
-  const updateStatus = async (guestId: string, newStatus: string) => {
+  const updateStatus = async (leadId: string, newStatus: string) => {
     if (!hotelId) return;
+    // For dropdown, "Action Needed" corresponds to "captured"
+    const actualStatus = newStatus === "" ? "captured" : newStatus;
+    
     try {
-      setGuests(prev => prev.map(g => g.id === guestId ? { ...g, contacted_status: newStatus } : g));
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: actualStatus } : l));
       
       const { error } = await supabase
-        .from("guests")
-        .update({ contacted_status: newStatus })
-        .eq("id", guestId)
+        .from("leads")
+        .update({ status: actualStatus })
+        .eq("id", leadId)
         .eq("hotel_id", hotelId);
         
       if (error) throw error;
+      showToast(`Status updated to ${actualStatus}`, 'success');
     } catch (err) {
       console.error("Failed to update status:", err);
+      showToast('Failed to update lead status', 'error');
       // Revert on failure by refetching
       fetchGuests();
     }
   };
 
   const exportCSV = () => {
-    if (guests.length === 0) return;
+    if (leads.length === 0) return;
     
-    const headers = ["Name", "Email", "Phone", "Date Captured", "Status"];
-    const rows = guests.map(g => [
-      g.name || "",
-      g.email || "",
-      g.phone || "",
-      new Date(g.created_at).toLocaleDateString(),
-      g.contacted_status || "Action Needed"
+    const headers = ["Name", "Email", "Phone", "Date Captured", "Quality", "Status"];
+    const rows = leads.map(l => [
+      l.name || "",
+      l.email || "",
+      l.phone || "",
+      new Date(l.created_at).toLocaleDateString(),
+      (l.lead_quality || 0).toString(),
+      l.status || "captured"
     ]);
     
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -122,7 +138,7 @@ export function CRMTab() {
         </div>
         <button 
           onClick={exportCSV} 
-          disabled={guests.length === 0}
+          disabled={leads.length === 0}
           className="flex items-center gap-2 px-3 py-1.5 bg-dash-surface border border-dash-border hover:bg-dash-surface-hover text-dash-text rounded-md text-xs font-medium transition-colors disabled:opacity-50"
         >
           <Download className="w-4 h-4" /> Export Leads
@@ -165,7 +181,7 @@ export function CRMTab() {
               <RefreshCw className="w-6 h-6 animate-spin text-[#EA6639]" />
               <span className="text-xs">Loading leads...</span>
             </div>
-          ) : guests.length === 0 ? (
+          ) : leads.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-dash-text-muted space-y-3 p-6 text-center">
               <div className="w-12 h-12 rounded-full bg-dash-canvas flex items-center justify-center mb-2">
                 <FileText className="w-6 h-6 text-dash-text-sec opacity-50" />
@@ -191,49 +207,69 @@ export function CRMTab() {
                 <tr>
                   <th className="px-4 py-3 font-semibold">Guest Name</th>
                   <th className="px-4 py-3 font-semibold">Contact Info</th>
+                  <th className="px-4 py-3 font-semibold">Quality</th>
                   <th className="px-4 py-3 font-semibold">Date Captured</th>
                   <th className="px-4 py-3 font-semibold">Lead Status</th>
                   <th className="px-4 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dash-border-hairline">
-                {guests.map((guest) => (
-                  <tr key={guest.id} className="hover:bg-dash-surface-hover/60 transition-colors group">
+                {leads.map((lead) => (
+                  <tr key={lead.id} className="hover:bg-dash-surface-hover/60 transition-colors group">
                     <td className="px-4 py-3.5 font-medium text-dash-text">
-                      {guest.name}
+                      {lead.name}
                     </td>
                     <td className="px-4 py-3.5 text-dash-text-sec">
                       <div className="flex flex-col gap-1">
-                        {guest.email && (
+                        {lead.email && (
                           <div className="flex items-center gap-1.5">
                             <Mail className="w-3 h-3 opacity-60 shrink-0" />
-                            <span className="truncate max-w-[150px]">{guest.email}</span>
+                            <span className="truncate max-w-[150px]">{lead.email}</span>
                           </div>
                         )}
-                        {guest.phone && (
+                        {lead.phone && (
                           <div className="flex items-center gap-1.5">
                             <Phone className="w-3 h-3 opacity-60 shrink-0" />
-                            <span>{guest.phone}</span>
+                            <span>{lead.phone}</span>
                           </div>
                         )}
-                        {!guest.email && !guest.phone && (
+                        {!lead.email && !lead.phone && (
                           <span className="text-dash-text-muted italic">No contact provided</span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-dash-text-sec">
-                      {new Date(guest.created_at).toLocaleDateString(undefined, { 
+                      <div className="flex items-center gap-0.5">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <svg
+                            key={i}
+                            className={`w-3.5 h-3.5 ${
+                              i < (lead.lead_quality || 0)
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-zinc-200 fill-zinc-200"
+                            }`}
+                            viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-dash-text-sec">
+                      {new Date(lead.created_at).toLocaleDateString(undefined, { 
                         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
                       })}
                     </td>
                     <td className="px-4 py-3.5">
                       <select 
-                        value={guest.contacted_status || ""}
-                        onChange={(e) => updateStatus(guest.id, e.target.value)}
+                        value={lead.status === "captured" ? "" : (lead.status || "")}
+                        onChange={(e) => updateStatus(lead.id, e.target.value)}
                         className={`text-xs px-2 py-1 rounded border appearance-none cursor-pointer pr-6 focus:outline-none focus:ring-1 focus:ring-[#EA6639] ${
-                          !guest.contacted_status ? 'bg-amber-100 text-amber-800 border-amber-200' :
-                          guest.contacted_status === 'contacted' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                          guest.contacted_status === 'booked' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                          lead.status === 'captured' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                          lead.status === 'contacted' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                          lead.status === 'booked' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                          lead.status === 'lost' ? 'bg-red-100 text-red-800 border-red-200' :
                           'bg-zinc-100 text-zinc-800 border-zinc-200'
                         }`}
                         style={{
@@ -251,16 +287,20 @@ export function CRMTab() {
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {!guest.contacted_status && (
+                        {lead.status === 'captured' && (
                           <button 
-                            onClick={() => updateStatus(guest.id, "contacted")}
+                            onClick={() => updateStatus(lead.id, "contacted")}
                             className="p-1.5 text-dash-text-muted hover:text-[#EA6639] hover:bg-[#EA6639]/10 rounded transition-colors" 
                             title="Mark as Contacted"
                           >
                             <CheckCircle className="w-4 h-4" />
                           </button>
                         )}
-                        <button className="p-1.5 text-dash-text-muted hover:text-dash-text hover:bg-dash-surface-hover rounded transition-colors" title="View Profile">
+                        <button 
+                          onClick={() => setSelectedLead(lead)}
+                          className="p-1.5 text-dash-text-muted hover:text-dash-text hover:bg-dash-surface-hover rounded transition-colors" 
+                          title="View Profile"
+                        >
                           <Eye className="w-4 h-4" />
                         </button>
                       </div>
@@ -298,6 +338,86 @@ export function CRMTab() {
           </div>
         </div>
       </div>
+
+      {/* Lead Profile Modal */}
+      <Modal 
+        isOpen={!!selectedLead} 
+        onClose={() => setSelectedLead(null)}
+        title="Guest Profile"
+      >
+        {selectedLead && (
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-lg font-semibold text-dash-text">{selectedLead.name}</h4>
+              <p className="text-sm text-dash-text-sec flex items-center gap-2 mt-1">
+                Captured via {selectedLead.channel || 'Website'} 
+                <span className="w-1 h-1 rounded-full bg-dash-border"></span>
+                {new Date(selectedLead.created_at).toLocaleDateString(undefined, { 
+                  month: 'long', day: 'numeric', year: 'numeric' 
+                })}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 rounded-lg border border-dash-border bg-dash-surface-raised space-y-1">
+                <span className="text-[10px] uppercase font-bold text-dash-text-muted flex items-center gap-1.5">
+                  <Mail className="w-3 h-3" /> Email
+                </span>
+                <p className="text-sm font-medium text-dash-text truncate" title={selectedLead.email || ''}>
+                  {selectedLead.email || 'Not provided'}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg border border-dash-border bg-dash-surface-raised space-y-1">
+                <span className="text-[10px] uppercase font-bold text-dash-text-muted flex items-center gap-1.5">
+                  <Phone className="w-3 h-3" /> Phone
+                </span>
+                <p className="text-sm font-medium text-dash-text">
+                  {selectedLead.phone || 'Not provided'}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg border border-dash-border bg-dash-surface-raised space-y-1">
+                <span className="text-[10px] uppercase font-bold text-dash-text-muted flex items-center gap-1.5">
+                  <Calendar className="w-3 h-3" /> Target Dates
+                </span>
+                <p className="text-sm font-medium text-dash-text">
+                  {selectedLead.check_in ? `${new Date(selectedLead.check_in).toLocaleDateString()} - ${selectedLead.check_out ? new Date(selectedLead.check_out).toLocaleDateString() : '?'}` : 'Flexible'}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg border border-dash-border bg-dash-surface-raised space-y-1">
+                <span className="text-[10px] uppercase font-bold text-dash-text-muted flex items-center gap-1.5">
+                  <Users className="w-3 h-3" /> Party Size
+                </span>
+                <p className="text-sm font-medium text-dash-text">
+                  {selectedLead.guests ? `${selectedLead.guests} Guests` : 'Unknown'}
+                </p>
+              </div>
+            </div>
+
+            {selectedLead.purpose && (
+              <div>
+                <h5 className="text-xs font-semibold text-dash-text-muted uppercase mb-2 flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5" /> Purpose of Visit
+                </h5>
+                <p className="text-sm text-dash-text bg-dash-surface-raised p-3 rounded-lg border border-dash-border">
+                  {selectedLead.purpose}
+                </p>
+              </div>
+            )}
+            
+            <div className="pt-4 border-t border-dash-border flex justify-end">
+              <button
+                onClick={() => {
+                  window.location.href = `mailto:${selectedLead.email}`;
+                }}
+                disabled={!selectedLead.email}
+                className="px-4 py-2 bg-[#EA6639] text-white rounded-md text-sm font-medium hover:bg-[#EA6639]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                <Mail className="w-4 h-4" /> Send Email
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

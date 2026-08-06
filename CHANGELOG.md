@@ -4,6 +4,7 @@ All notable changes to this project, including implementations, rollbacks, audit
 
 ## [Unreleased]
 ### Implementations
+- **Hub Frontend (Phase D)**: Successfully wired the Hub's `DashboardTab`, `InboxTab`, `CRMTab`, `KnowledgeBaseTab`, `StaffTab`, and `ComplianceTab` components to live Supabase data. Integrated `recharts` for KPI charts, implemented Supabase Realtime for the unified inbox, configured CRUD interfaces for lead management and knowledge base updates, and natively integrated data fetching for DPA records, sub-processors, and Data Subject Requests (DSR) using the shared `hotel_id` auth context.
 - **Subscription Enforcement in Gateway**: Created `base/bot-engine/services/subscription.js` to perform a live Supabase Postgres check on `subscriptions.status` per hotel slug. The gateway now returns `200 {blocked: true}` (not 402) on inactive subs so OpenBSP stops retrying silently. Falls open on DB error to avoid blocking live messages during outages.
 - **Webhook Gateway & n8n Decoupling**: Decoupled OpenBSP webhooks from n8n by routing `/api/webhook/openbsp` to `bot-engine`. The bot-engine forwards payloads trimmed to the last 10 messages to the internal n8n containers (`n8n_${HOTEL_SLUG}:5678`), preventing webhook disconnections when n8n workflows are deactivated.
 - **N8n Execution Memory Protection**: Added `EXECUTIONS_DATA_SAVE_ON_SUCCESS=none` to GCE and HCA docker-compose files to prevent n8n's SQLite database from crashing due to large conversation payloads.

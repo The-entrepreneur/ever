@@ -81,7 +81,7 @@ const Skeleton = ({ className }: { className?: string }) => (
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export function DashboardTab({ onNavigate }: { onNavigate?: (tab: any) => void }) {
+export function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, context?: any) => void }) {
   const { user, hotelId } = useAuth();
 
   // KPI state
@@ -122,23 +122,23 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: any) => void }
 
         // Total leads (guests) captured
         supabase
-          .from("guests")
-          .select("id, contacted_status", { count: "exact" })
+          .from("leads")
+          .select("id, status", { count: "exact" })
           .eq("hotel_id", hotelId),
 
         // Handoffs last 30d (for handoff rate)
         supabase
-          .from("handoffs")
+          .from("handoff_sessions")
           .select("id", { count: "exact" })
           .eq("hotel_id", hotelId)
           .gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()),
 
-        // Active live sessions
+        // Active live sessions (active handoffs)
         supabase
-          .from("conversations")
+          .from("handoff_sessions")
           .select("id", { count: "exact" })
           .eq("hotel_id", hotelId)
-          .eq("status", "human_active"),
+          .eq("status", "active"),
 
         // Average feedback score
         supabase
@@ -149,7 +149,7 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: any) => void }
 
         // Recent handoffs feed
         supabase
-          .from("handoffs")
+          .from("handoff_sessions")
           .select("id, session_id, reason, channel, created_at")
           .eq("hotel_id", hotelId)
           .order("created_at", { ascending: false })
@@ -177,15 +177,15 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: any) => void }
       // Handoffs feed
       setRecentHandoffs((recentHandoffsRes.data ?? []) as HandoffEntry[]);
 
-      // Lead funnel data from guests
-      const guests = leadsRes.data ?? [];
-      const enquired = guests.length;
-      const captured = guests.filter(g => g.contacted_status !== null).length;
-      const contacted = guests.filter(g =>
-        ["contacted", "booked"].includes(g.contacted_status ?? "")
+      // Lead funnel data from leads
+      const leads = leadsRes.data ?? [];
+      const enquired = leads.length;
+      const captured = leads.filter(l => l.status !== null && l.status !== 'new').length;
+      const contacted = leads.filter(l =>
+        ["contacted", "booked"].includes(l.status ?? "")
       ).length;
-      const booked = guests.filter(g => g.contacted_status === "booked").length;
-      const lost = guests.filter(g => g.contacted_status === "lost").length;
+      const booked = leads.filter(l => l.status === "booked").length;
+      const lost = leads.filter(l => l.status === "lost").length;
 
       setFunnelData([
         { stage: "Enquired", count: enquired, color: "#EA6639" },
@@ -494,7 +494,7 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: any) => void }
             {recentHandoffs.map((h) => (
               <button
                 key={h.id}
-                onClick={() => onNavigate?.("inbox")}
+                onClick={() => onNavigate?.("inbox", { sessionId: h.session_id })}
                 className="p-3 bg-dash-canvas rounded-lg border border-dash-border-hairline text-left hover:border-[#EA6639]/30 hover:bg-dash-canvas/80 transition-all group"
               >
                 <div className="flex justify-between items-start mb-1 gap-2">

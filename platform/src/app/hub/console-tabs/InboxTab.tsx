@@ -5,147 +5,60 @@ import {
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../context/AuthContext";
+import { useToast } from "../../../shared/ToastContext";
+import { Modal } from "../../../shared/Modal";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-interface Conversation {
-  id: string;
+interface InboxSession {
   session_id: string;
-  guest_name: string;
-  guest_phone?: string;
-  guest_email?: string;
-  channel: "whatsapp" | "widget" | "meta" | string;
-  status: "open" | "pending_handoff" | "agent_active" | "resolved";
-  handoff_requested: boolean;
-  last_message: string;
+  hotel_id: string;
   last_message_at: string;
-  created_at: string;
+  last_message: string;
+  channel: string;
+  guest_name: string | null;
+  guest_phone: string | null;
+  guest_email: string | null;
+  handoff_status: string | null;
+  agent_id: string | null;
 }
 
-interface Message {
+interface ChatMessage {
   id: string;
-  conversation_id: string;
+  session_id: string;
+  client_id: string;
+  hotel_slug: string | null;
+  channel: string;
   role: "user" | "assistant" | "agent";
   content: string;
   created_at: string;
 }
 
-const MOCK_CONVERSATIONS: Conversation[] = [
-  {
-    id: "conv-1",
-    session_id: "SESS-102",
-    guest_name: "Sarah Jenkins",
-    guest_phone: "+1 555 0192",
-    guest_email: "sarah.j@example.com",
-    channel: "whatsapp",
-    status: "pending_handoff",
-    handoff_requested: true,
-    last_message: "I'd like to speak to a human about my booking.",
-    last_message_at: new Date(Date.now() - 600000).toISOString(),
-    created_at: new Date(Date.now() - 900000).toISOString()
-  },
-  {
-    id: "conv-2",
-    session_id: "SESS-098",
-    guest_name: "Mark Thompson",
-    guest_phone: "+1 555 0248",
-    guest_email: "mark.t@example.com",
-    channel: "widget",
-    status: "agent_active",
-    handoff_requested: false,
-    last_message: "Agent: We've upgraded your room to the suite.",
-    last_message_at: new Date(Date.now() - 3300000).toISOString(),
-    created_at: new Date(Date.now() - 3600000).toISOString()
-  },
-  {
-    id: "conv-3",
-    session_id: "SESS-095",
-    guest_name: "Lucia Fernandez",
-    guest_phone: "+34 655 992 001",
-    guest_email: "lucia.f@example.com",
-    channel: "whatsapp",
-    status: "open",
-    handoff_requested: false,
-    last_message: "Does the restaurant open at 7am?",
-    last_message_at: new Date(Date.now() - 7200000).toISOString(),
-    created_at: new Date(Date.now() - 7500000).toISOString()
-  }
-];
-
-const MOCK_MESSAGES: Record<string, Message[]> = {
-  "conv-1": [
-    {
-      id: "msg-1a",
-      conversation_id: "conv-1",
-      role: "user",
-      content: "I'd like to modify my dates, but your policy says it's non-refundable. Is there any way around this?",
-      created_at: new Date(Date.now() - 900000).toISOString()
-    },
-    {
-      id: "msg-1b",
-      conversation_id: "conv-1",
-      role: "assistant",
-      content: "I understand you want to modify a non-refundable booking. Usually, these cannot be changed. However, let me connect you with a human agent who can look into this specific reservation for you.",
-      created_at: new Date(Date.now() - 840000).toISOString()
-    },
-    {
-      id: "msg-1c",
-      conversation_id: "conv-1",
-      role: "user",
-      content: "I'd like to speak to a human about my booking.",
-      created_at: new Date(Date.now() - 600000).toISOString()
-    }
-  ],
-  "conv-2": [
-    {
-      id: "msg-2a",
-      conversation_id: "conv-2",
-      role: "user",
-      content: "Hi, can I get a room upgrade? We have a special anniversary.",
-      created_at: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-      id: "msg-2b",
-      conversation_id: "conv-2",
-      role: "agent",
-      content: "We've upgraded your room to the suite. Congratulations on your anniversary!",
-      created_at: new Date(Date.now() - 3300000).toISOString()
-    }
-  ],
-  "conv-3": [
-    {
-      id: "msg-3a",
-      conversation_id: "conv-3",
-      role: "user",
-      content: "Does the restaurant open at 7am?",
-      created_at: new Date(Date.now() - 7200000).toISOString()
-    }
-  ]
-};
-
 // ─── Helper ───────────────────────────────────────────────────────────────────
 function timeAgo(dateStr: string) {
+  if (!dateStr) return "";
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
   if (diff < 60) return `${diff}s ago`;
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
 }
 
 function channelLabel(ch: string) {
   const map: Record<string, string> = {
-    whatsapp: "WhatsApp", widget: "Web Widget", meta: "Meta"
+    whatsapp: "WhatsApp", widget: "Web Widget", meta: "Meta", instagram: "Instagram"
   };
-  return map[ch] || ch;
+  return map[ch] || ch || "Unknown";
 }
 
 // ─── Status Chip ─────────────────────────────────────────────────────────────
-function StatusChip({ status, handoff }: { status: string; handoff: boolean }) {
-  if (handoff)
+function StatusChip({ status }: { status: string | null }) {
+  if (status === "open")
     return (
       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
         HANDOFF
       </span>
     );
-  if (status === "agent_active")
+  if (status === "active")
     return (
       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
         ACTIVE
@@ -159,107 +72,116 @@ function StatusChip({ status, handoff }: { status: string; handoff: boolean }) {
     );
   return (
     <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 text-zinc-600">
-      OPEN
+      BOT
     </span>
   );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export function InboxTab() {
-  const { hotelId } = useAuth();
+export function InboxTab({ initialSessionId }: { initialSessionId?: string | null }) {
+  const { hotelId, user } = useAuth();
+  const { showToast } = useToast();
   const [activeFilter, setActiveFilter] = useState("All");
-  const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
-  const [selectedConvId, setSelectedConvId] = useState<string | null>(MOCK_CONVERSATIONS[0].id);
-  const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES["conv-1"] || []);
+  const [conversations, setConversations] = useState<InboxSession[]>([]);
+  const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [agentMode, setAgentMode] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [search, setSearch] = useState("");
   const [isRealtime, setIsRealtime] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Resolve Confirmation Modal state
+  const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load conversations and subscribe to Realtime updates
-  useEffect(() => {
-    const loadConversations = async () => {
-      try {
-        let query = supabase
-          .from("conversations")
-          .select("*")
-          .order("last_message_at", { ascending: false })
-          .limit(50);
+  // Load conversation list
+  const fetchConversations = async () => {
+    if (!hotelId) return;
+    try {
+      const { data, error } = await supabase
+        .from("inbox_sessions")
+        .select("*")
+        .eq("hotel_id", hotelId)
+        .order("last_message_at", { ascending: false })
+        .limit(50);
 
-        // Scope to hotel if available
-        if (hotelId) query = query.eq("hotel_id", hotelId);
-
-        const { data: convData, error } = await query;
-
-        if (!error && convData && convData.length > 0) {
-          setConversations(convData as Conversation[]);
-          setSelectedConvId(convData[0].id);
-          setIsRealtime(true);
+      if (!error && data) {
+        setConversations(data as InboxSession[]);
+        if (initialSessionId) {
+          setSelectedConvId(initialSessionId);
+        } else if (!selectedConvId && data.length > 0) {
+          setSelectedConvId(data[0].session_id);
         }
-      } catch (err) {
-        console.warn("[Inbox] Failed to load conversations, using mock data:", err);
+        setIsRealtime(true);
       }
-    };
+    } catch (err) {
+      console.warn("[Inbox] Failed to load conversations:", err);
+    }
+  };
 
-    loadConversations();
+  useEffect(() => {
+    fetchConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotelId, initialSessionId]);
 
-    // Realtime: subscribe to conversation and message changes
-    const filter = hotelId ? `hotel_id=eq.${hotelId}` : undefined;
-    const channelOpts: any = { event: "*", schema: "public", table: "conversations" };
-    if (filter) channelOpts.filter = filter;
+  useEffect(() => {
+    if (!hotelId) return;
+
+    // Subscriptions for real-time live inbox updates
+    const filterConversations = `client_id=eq.${hotelId}`;
+    const filterHandoffs = `hotel_id=eq.${hotelId}`;
 
     const realtimeChannel = supabase
       .channel("inbox_realtime")
-      .on("postgres_changes", channelOpts, (payload) => {
-        if (payload.eventType === "INSERT") {
-          setConversations((prev) => [payload.new as Conversation, ...prev]);
-        } else if (payload.eventType === "UPDATE") {
-          setConversations((prev) =>
-            prev.map((c) => (c.id === (payload.new as Conversation).id ? (payload.new as Conversation) : c))
-          );
-        }
-      })
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
+        { event: "INSERT", schema: "public", table: "conversations", filter: filterConversations },
         (payload) => {
-          const msg = payload.new as Message;
+          const msg = payload.new as ChatMessage;
+          // Refresh list to update the last_message and last_message_at
+          fetchConversations();
+          
+          // Append to open chat if it matches
           setMessages((prev) => {
-            if (msg.conversation_id === selectedConvId) return [...prev, msg];
+            if (msg.session_id === selectedConvId) return [...prev, msg];
             return prev;
           });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "handoff_sessions", filter: filterHandoffs },
+        () => {
+          // Re-fetch conversation list if a handoff state changes
+          fetchConversations();
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(realtimeChannel); };
-  }, [hotelId]);
+  }, [hotelId, selectedConvId]);
 
-  // Load messages when selected conversation changes
+  // Load chat history when selected conversation changes
   useEffect(() => {
     if (!selectedConvId) return;
     setIsLoading(true);
-    setAgentMode(false);
 
     const loadMessages = async () => {
       try {
         const { data, error } = await supabase
-          .from("messages")
+          .from("conversations")
           .select("*")
-          .eq("conversation_id", selectedConvId)
+          .eq("session_id", selectedConvId)
           .order("created_at", { ascending: true })
-          .limit(100);
+          .limit(200);
 
-        if (!error && data && data.length > 0) {
-          setMessages(data as Message[]);
-        } else {
-          // Fall back to mock data for development
-          setMessages(MOCK_MESSAGES[selectedConvId] || []);
+        if (!error && data) {
+          setMessages(data as ChatMessage[]);
         }
-      } catch {
-        setMessages(MOCK_MESSAGES[selectedConvId] || []);
+      } catch (err) {
+        console.warn("[Inbox] Error fetching messages", err);
       } finally {
         setIsLoading(false);
       }
@@ -268,74 +190,98 @@ export function InboxTab() {
     loadMessages();
   }, [selectedConvId]);
 
-  // Auto scroll
+  // Derive agent mode from the current selected conversation's handoff status
+  useEffect(() => {
+    const activeConv = conversations.find((c) => c.session_id === selectedConvId);
+    if (activeConv && activeConv.handoff_status === "active") {
+      setAgentMode(true);
+    } else {
+      setAgentMode(false);
+    }
+  }, [selectedConvId, conversations]);
+
+  // Auto scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const selectedConv = conversations.find((c) => c.id === selectedConvId) || null;
+  const selectedConv = conversations.find((c) => c.session_id === selectedConvId) || null;
 
   const filteredConvs = conversations.filter((c) => {
     const matchFilter =
       activeFilter === "All" ||
-      (activeFilter === "Pending Handoff" && c.handoff_requested) ||
-      (activeFilter === "My Active Chats" && c.status === "agent_active");
+      (activeFilter === "Pending Handoff" && c.handoff_status === "open") ||
+      (activeFilter === "My Active Chats" && c.handoff_status === "active");
     const matchSearch =
       !search ||
-      c.guest_name.toLowerCase().includes(search.toLowerCase()) ||
+      (c.guest_name && c.guest_name.toLowerCase().includes(search.toLowerCase())) ||
       c.session_id.toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   });
 
-  const handleTakeover = () => {
+  const handleTakeover = async () => {
+    if (!selectedConv || !hotelId) return;
     setAgentMode(true);
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === selectedConvId
-          ? { ...c, status: "agent_active", handoff_requested: false }
-          : c
-      )
-    );
-  };
-
-  const handleResolve = async () => {
-    setAgentMode(false);
-    setConversations((prev) =>
-      prev.map((c) => (c.id === selectedConvId ? { ...c, status: "resolved" } : c))
-    );
-
-    if (selectedConv) {
-      try {
-        await fetch("/api/conversations/resolve", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            session_id: selectedConv.session_id,
-            channel: selectedConv.channel
-          })
-        });
-      } catch (err) {
-        console.warn("[Inbox] Failed to clear handoff lock:", err);
-      }
+    
+    try {
+      const { error } = await supabase.from("handoff_sessions").upsert({
+        hotel_id: hotelId,
+        session_id: selectedConv.session_id,
+        channel: selectedConv.channel,
+        status: "active",
+        agent_id: user?.id,
+        created_at: new Date().toISOString()
+      }, { onConflict: "session_id" });
+      
+      if (error) throw error;
+      showToast("Chat taken over successfully. AI paused.", "success");
+      fetchConversations();
+    } catch (err) {
+      setAgentMode(false);
+      showToast("Failed to take over chat.", "error");
     }
   };
 
-  const handleSend = () => {
-    if (!replyText.trim() || !selectedConvId) return;
-    const newMsg: Message = {
-      id: `local-${Date.now()}`,
-      conversation_id: selectedConvId,
-      role: "agent",
-      content: replyText.trim(),
-      created_at: new Date().toISOString()
-    };
-    setMessages((prev) => [...prev, newMsg]);
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === selectedConvId ? { ...c, last_message: `Agent: ${newMsg.content}`, last_message_at: newMsg.created_at } : c
-      )
-    );
-    setReplyText("");
+  const handleResolve = async () => {
+    if (!selectedConv) return;
+    
+    try {
+      const { error } = await supabase
+        .from("handoff_sessions")
+        .update({ status: "resolved", resolved_at: new Date().toISOString() })
+        .eq("session_id", selectedConv.session_id);
+        
+      if (error) throw error;
+      
+      setAgentMode(false);
+      setIsResolveModalOpen(false);
+      showToast("Chat resolved. AI resumed.", "success");
+      fetchConversations();
+    } catch (err) {
+      showToast("Failed to resolve chat.", "error");
+    }
+  };
+
+  const handleSend = async () => {
+    if (!replyText.trim() || !selectedConv || !hotelId) return;
+    
+    const textToSend = replyText.trim();
+    setReplyText(""); // optimistic clear
+    
+    try {
+      const { error } = await supabase.from("conversations").insert({
+        session_id: selectedConv.session_id,
+        client_id: hotelId,
+        channel: selectedConv.channel,
+        role: "agent",
+        content: textToSend,
+        created_at: new Date().toISOString()
+      });
+      if (error) throw error;
+    } catch (err) {
+      showToast("Failed to send message", "error");
+      setReplyText(textToSend); // restore on fail
+    }
   };
 
   return (
@@ -352,7 +298,7 @@ export function InboxTab() {
                 </span>
               ) : (
                 <span className="flex items-center gap-1 text-zinc-400">
-                  <WifiOff className="w-3 h-3" /> Simulated
+                  <WifiOff className="w-3 h-3" /> Connecting...
                 </span>
               )}
             </div>
@@ -393,20 +339,20 @@ export function InboxTab() {
           ) : (
             filteredConvs.map((conv) => (
               <div
-                key={conv.id}
-                onClick={() => setSelectedConvId(conv.id)}
+                key={conv.session_id}
+                onClick={() => setSelectedConvId(conv.session_id)}
                 className={`p-4 cursor-pointer transition-colors ${
-                  selectedConvId === conv.id
+                  selectedConvId === conv.session_id
                     ? "bg-[#EA6639]/5 border-l-2 border-[#EA6639]"
                     : "hover:bg-dash-surface-hover border-l-2 border-transparent"
                 }`}
               >
                 <div className="flex justify-between items-start mb-1">
                   <span className="font-medium text-xs text-dash-text flex items-center gap-1.5">
-                    {conv.handoff_requested && (
+                    {conv.handoff_status === "open" && (
                       <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
                     )}
-                    {conv.guest_name}
+                    {conv.guest_name || "Unknown Guest"}
                   </span>
                   <span className="text-[10px] text-dash-text-muted shrink-0">
                     {timeAgo(conv.last_message_at)}
@@ -416,7 +362,7 @@ export function InboxTab() {
                   <div className="text-[10px] text-dash-text-muted font-mono">
                     {conv.session_id} • {channelLabel(conv.channel)}
                   </div>
-                  <StatusChip status={conv.status} handoff={conv.handoff_requested} />
+                  <StatusChip status={conv.handoff_status} />
                 </div>
                 <p className="text-xs text-dash-text-sec truncate">{conv.last_message}</p>
               </div>
@@ -433,22 +379,22 @@ export function InboxTab() {
             <div className="p-4 border-b border-dash-border bg-dash-surface shrink-0">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-body font-medium text-dash-text flex items-center gap-2 flex-wrap">
-                  {selectedConv.guest_name}
-                  <StatusChip status={selectedConv.status} handoff={selectedConv.handoff_requested} />
+                  {selectedConv.guest_name || "Unknown Guest"}
+                  <StatusChip status={selectedConv.handoff_status} />
                 </h3>
                 <div className="flex items-center gap-2 shrink-0">
                   {agentMode ? (
                     <button
-                      onClick={handleResolve}
-                      className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-md hover:bg-emerald-700 transition-colors flex items-center gap-1.5"
+                      onClick={() => setIsResolveModalOpen(true)}
+                      className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-md hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shadow-sm"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Resolve
+                      Resolve Chat
                     </button>
                   ) : (
                     <button
                       onClick={handleTakeover}
-                      className="px-3 py-1.5 bg-dash-surface text-dash-text text-xs font-medium rounded-md border border-dash-border hover:bg-dash-surface-raised transition-colors"
+                      className="px-3 py-1.5 bg-dash-surface text-dash-text text-xs font-medium rounded-md border border-dash-border hover:bg-dash-surface-raised transition-colors shadow-sm"
                     >
                       Take Over Chat
                     </button>
@@ -472,13 +418,13 @@ export function InboxTab() {
                   <User className="w-3.5 h-3.5 shrink-0" />
                   {channelLabel(selectedConv.channel)}
                 </div>
-                {selectedConv.handoff_requested && (
+                {selectedConv.handoff_status === "open" && (
                   <div className="flex items-center gap-1.5 text-red-500 font-medium">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     Human requested
                   </div>
                 )}
-                {selectedConv.status === "agent_active" && !selectedConv.handoff_requested && (
+                {selectedConv.handoff_status === "active" && (
                   <div className="flex items-center gap-1.5 text-blue-500 font-medium">
                     <Clock className="w-3.5 h-3.5 shrink-0" />
                     Agent active
@@ -522,7 +468,7 @@ export function InboxTab() {
                     </div>
                   ))}
 
-                  {selectedConv.handoff_requested && !agentMode && (
+                  {selectedConv.handoff_status === "open" && !agentMode && (
                     <div className="flex justify-center">
                       <span className="text-xs font-mono text-red-500 bg-red-50 px-3 py-1 rounded-md border border-red-200">
                         Bot silenced — awaiting agent takeover
@@ -547,7 +493,7 @@ export function InboxTab() {
                         handleSend();
                       }
                     }}
-                    placeholder={`Reply to ${selectedConv.guest_name}...`}
+                    placeholder={`Reply to ${selectedConv.guest_name || "guest"}...`}
                     className="w-full p-3 pr-24 bg-dash-canvas border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] resize-none h-[72px] text-dash-text"
                   />
                   <div className="absolute right-3 bottom-3">
@@ -589,6 +535,33 @@ export function InboxTab() {
           </div>
         )}
       </div>
+
+      {/* Resolve Confirmation Modal */}
+      <Modal
+        isOpen={isResolveModalOpen}
+        onClose={() => setIsResolveModalOpen(false)}
+        title="Resolve Conversation"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-dash-text-sec">
+            Are you sure you want to resolve this conversation? The AI bot will resume handling any new messages from the guest.
+          </p>
+          <div className="flex justify-end gap-2 pt-4 border-t border-dash-border">
+            <button
+              onClick={() => setIsResolveModalOpen(false)}
+              className="px-4 py-2 text-dash-text text-sm font-medium hover:bg-dash-surface-hover rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleResolve}
+              className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition-colors"
+            >
+              Confirm & Resolve
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

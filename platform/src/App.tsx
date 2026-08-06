@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { ThemeProvider, useTheme } from "./shared/ThemeProvider";
 import { CurrencyProvider } from "./context/CurrencyContext";
 import { AuthProvider } from "./context/AuthContext";
+import { ToastProvider } from "./shared/ToastContext";
 import { ProtectedRoute } from "./shared/ProtectedRoute";
 import { Navbar } from "./app/marketing/Navbar";
 import { Hero } from "./app/marketing/Hero";
@@ -177,11 +178,13 @@ export default function App() {
     <ThemeProvider defaultTheme="light" storageKey="ever-theme">
       <CurrencyProvider>
         <AuthProvider>
-          <BrowserRouter>
-            <ScrollToTop />
-            <PageTitle />
-            <AppLayout />
-          </BrowserRouter>
+          <ToastProvider>
+            <BrowserRouter>
+              <ScrollToTop />
+              <PageTitle />
+              <AppLayout />
+            </BrowserRouter>
+          </ToastProvider>
         </AuthProvider>
       </CurrencyProvider>
     </ThemeProvider>

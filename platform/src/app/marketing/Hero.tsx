@@ -60,7 +60,7 @@ export function Hero() {
           
           {/* Rotated vertical title resembling the aesthetic typography of the image */}
           <div className="transform -rotate-90 origin-center whitespace-nowrap text-[10px] font-mono tracking-[0.2em] uppercase text-zinc-500 font-semibold my-48">
-            Actionable insights and automated workflows
+            Hotels lose 18% of every booking to OTAs. Ever captures those bookings directly in the channels guests already use.
           </div>
 
           <div className="text-[10px] font-mono">

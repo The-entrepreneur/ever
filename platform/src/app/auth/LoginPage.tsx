@@ -118,7 +118,6 @@ export function LoginPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between items-end">
                         <label className="text-sm font-semibold text-zinc-900 ml-1">Email</label>
-                        <span className="text-[10px] text-zinc-500 font-medium">Use 'admin@ever.ai' for Agency Command</span>
                       </div>
                       <input
                         required

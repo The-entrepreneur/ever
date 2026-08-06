@@ -68,10 +68,19 @@ export function Console() {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"dashboard" | "inbox" | "crm" | "knowledge_base" | "agent_settings" | "channels" | "staff" | "bookings" | "analytics" | "feedback" | "compliance" | "billing">("dashboard");
+  const [inboxTargetId, setInboxTargetId] = useState<string | null>(null);
+  
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  const handleNavigate = (tab: string, context?: any) => {
+    setActiveTab(tab as any);
+    if (tab === 'inbox' && context?.sessionId) {
+      setInboxTargetId(context.sessionId);
+    }
+  };
 
   // Register Service Worker and Setup Web Push Subscriptions
   useEffect(() => {
@@ -602,8 +611,8 @@ export function Console() {
 
         {/* Tab Content Area */}
         <div className="flex-1 overflow-y-auto relative min-h-0 bg-dash-canvas/50">
-          {activeTab === "dashboard" && <DashboardTab onNavigate={setActiveTab as any} />}
-          {activeTab === "inbox" && <InboxTab />}
+          {activeTab === "dashboard" && <DashboardTab onNavigate={handleNavigate as any} />}
+          {activeTab === "inbox" && <InboxTab initialSessionId={inboxTargetId} />}
           {activeTab === "crm" && <CRMTab />}
           {activeTab === "knowledge_base" && <KnowledgeBaseTab role={propertyProfile.role} />}
           {activeTab === "agent_settings" && <AgentSettingsTab role={propertyProfile.role} />}

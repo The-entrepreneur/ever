@@ -89,12 +89,12 @@ export function HelpDesk() {
             <p className="text-zinc-800 text-lg mb-8 font-light max-w-md">
               You've come this far — grab your spot before it's gone.
             </p>
-            <InteractiveButton 
-              onClick={() => setIsBookingModalOpen(true)} 
-              className="bg-[#F8E34C] hover:bg-[#F3DE42] !text-zinc-950 px-6 py-3 font-medium flex items-center justify-center gap-2 w-max rounded-md border border-yellow-300"
+            <button
+              onClick={() => setIsBookingModalOpen(true)}
+              className="inline-flex items-center gap-2 bg-[#111111] hover:bg-zinc-800 text-white px-6 py-3 font-medium rounded-lg transition-colors text-sm"
             >
               Pick a time <ArrowRight className="w-4 h-4 -rotate-45" />
-            </InteractiveButton>
+            </button>
 
             <div className="mt-12 space-y-0 text-left border-t border-zinc-900/10">
               {[
@@ -132,37 +132,20 @@ export function HelpDesk() {
             </div>
           </div>
 
-          {/* Right panel */}
-          <div className="bg-[#FAF9F5] flex-1 p-8 md:p-12 flex flex-col justify-between">
-            <div className="space-y-6 flex-1 flex flex-col justify-center">
-              <div className="w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 mb-6 bg-zinc-200">
-                <img 
-                  src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80" 
-                  alt="Flávio Ghelfond" 
-                  className="w-full h-full object-cover" 
-                />
+          {/* Right panel — stats 3-up horizontal row, matching reference image exactly */}
+          <div className="bg-[#F5F4F0] flex-1 p-8 md:p-12 flex flex-col justify-center gap-6">
+            <div className="grid grid-cols-3 gap-4 h-full items-center">
+              <div className="bg-white p-5 rounded-2xl border border-zinc-200/60 shadow-sm text-center flex flex-col items-center justify-center aspect-square">
+                <p className="text-4xl md:text-5xl font-light text-zinc-900 mb-2 leading-none">20%</p>
+                <p className="text-xs text-zinc-500 leading-snug">Increase in direct<br/>bookings</p>
               </div>
-              <blockquote className="text-2xl md:text-[28px] leading-tight font-serif italic text-zinc-900">
-                "Without Ever’s full range of conversational features, we wouldn’t be selling as effectively or exploring new business opportunities as we do today."
-              </blockquote>
-              <div className="text-xs">
-                <p className="text-zinc-900 font-semibold mb-1">Flávio Ghelfond</p>
-                <p className="text-zinc-500 font-light">Co-Founder and CFO of Charlie</p>
+              <div className="bg-white p-5 rounded-2xl border border-zinc-200/60 shadow-sm text-center flex flex-col items-center justify-center aspect-square">
+                <p className="text-4xl md:text-5xl font-light text-zinc-900 mb-2 leading-none">70+</p>
+                <p className="text-xs text-zinc-500 leading-snug">Built-in PMS<br/>channels</p>
               </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 mt-12 pt-8">
-              <div className="bg-white p-4 rounded-xl border border-zinc-200/60 shadow-sm text-center">
-                <p className="text-3xl md:text-4xl font-light text-zinc-900 mb-2">20%</p>
-                <p className="text-xs text-zinc-500">Increase in direct<br/>bookings</p>
-              </div>
-              <div className="bg-white p-4 rounded-xl border border-zinc-200/60 shadow-sm text-center">
-                <p className="text-3xl md:text-4xl font-light text-zinc-900 mb-2">70+</p>
-                <p className="text-xs text-zinc-500">Built-in PMS<br/>channels</p>
-              </div>
-              <div className="bg-white p-4 rounded-xl border border-zinc-200/60 shadow-sm text-center">
-                <p className="text-3xl md:text-4xl font-light text-zinc-900 mb-2">32%</p>
-                <p className="text-xs text-zinc-500">Lift in positive<br/>reviews</p>
+              <div className="bg-white p-5 rounded-2xl border border-zinc-200/60 shadow-sm text-center flex flex-col items-center justify-center aspect-square">
+                <p className="text-4xl md:text-5xl font-light text-zinc-900 mb-2 leading-none">32%</p>
+                <p className="text-xs text-zinc-500 leading-snug">Lift in positive<br/>reviews</p>
               </div>
             </div>
           </div>
@@ -219,7 +202,7 @@ export function HelpDesk() {
               </ul>
 
               <p className="text-xs text-zinc-500 font-light pt-2">
-                For product support or developers, visit our <Link to="/blog" className="text-[#EA6639] underline hover:text-[#EA6639]/80 font-medium">Help Center</Link> or join the <span className="text-[#EA6639] underline cursor-pointer font-medium">Ever Slack Group</span>.
+                For product support or developers, visit our <span className="text-zinc-500 font-medium">Help Center</span> or join the <span className="text-zinc-500 font-medium">Ever Slack Group</span>.
               </p>
             </div>
 
