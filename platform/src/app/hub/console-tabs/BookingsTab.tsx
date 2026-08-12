@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../context/AuthContext";
+import { useToast } from "../../../shared/ToastContext";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type BookingStatus = 'Confirmed' | 'Pending' | 'Cancelled';
@@ -15,7 +16,7 @@ type OrderStatus = 'Pending' | 'Preparing' | 'Completed';
 interface Booking {
   id: string;
   hotel_id: string;
-  booking_ref: string;
+  booking_reference: string;
   guest_name: string;
   room_type: string;
   check_in: string;
@@ -28,18 +29,17 @@ interface Booking {
 interface Order {
   id: string;
   hotel_id: string;
-  booking_id: string | null;
-  order_ref: string;
-  guest_name: string;
+  session_id: string;
   room_number: string;
-  category: OrderCategory;
-  item: string;
-  status: OrderStatus;
+  items: { name: string, qty: number }[];
+  total_amount: number;
+  status: string;
   created_at: string;
 }
 
 export function BookingsTab() {
   const { hotelId } = useAuth();
+  const { showToast } = useToast();
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [activeSubTab, setActiveSubTab] = useState<"bookings" | "orders">("bookings");
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -78,30 +78,62 @@ export function BookingsTab() {
       const today = new Date();
       const formatYMD = (d: Date) => d.toISOString().split('T')[0];
       
-      const in2Days = new Date(today); in2Days.setDate(today.getDate() + 2);
-      const out5Days = new Date(today); out5Days.setDate(today.getDate() + 5);
-      
-      const newBookings = [
-        { hotel_id: hotelId, booking_ref: `BK-${Math.floor(Math.random()*9000)+1000}`, guest_name: "Alice Smith", room_type: "Deluxe Ocean View", check_in: formatYMD(today), check_out: formatYMD(in2Days), total_amount: 1200.00, status: 'Confirmed' },
-        { hotel_id: hotelId, booking_ref: `BK-${Math.floor(Math.random()*9000)+1000}`, guest_name: "Bob Johnson", room_type: "Standard King", check_in: formatYMD(in2Days), check_out: formatYMD(out5Days), total_amount: 850.50, status: 'Pending' }
-      ];
+      const names = ["Alice Smith", "Bob Johnson", "Charlie Brown", "David Lee", "Emma Davis", "Fiona Gallagher", "George Miller", "Hannah White", "Ian Black", "Julia Roberts"];
+      const roomTypes = ["Deluxe Ocean View", "Standard King", "Presidential Suite", "Family Suite", "Double Queen"];
+      const statuses: BookingStatus[] = ['Confirmed', 'Pending', 'Cancelled'];
+      const orderStatuses: OrderStatus[] = ['Pending', 'Preparing', 'Completed'];
+      const categories: OrderCategory[] = ['Room Service', 'Housekeeping', 'Maintenance'];
+      const items = ["Club Sandwich", "Extra Towels", "Room Cleaning", "Heineken Beer", "Spa Massage", "Airport Transfer", "Pillows", "Coffee & Croissant"];
 
-      const { data: bData } = await supabase.from("bookings").insert(newBookings).select();
+      const newBookings = [];
+      for (let i = 0; i < 25; i++) {
+         const offset = Math.floor(Math.random() * 20) - 5; // -5 to +15 days
+         const duration = Math.floor(Math.random() * 5) + 1;
+         const checkIn = new Date(today); checkIn.setDate(today.getDate() + offset);
+         const checkOut = new Date(checkIn); checkOut.setDate(checkIn.getDate() + duration);
+         
+         newBookings.push({
+           hotel_id: hotelId,
+           booking_reference: `BK-${Math.floor(Math.random()*90000)+10000}`,
+           guest_name: names[Math.floor(Math.random() * names.length)],
+           room_type: roomTypes[Math.floor(Math.random() * roomTypes.length)],
+           check_in: formatYMD(checkIn),
+           check_out: formatYMD(checkOut),
+           total_amount: Math.floor(Math.random() * 2000) + 150,
+           status: statuses[Math.floor(Math.random() * statuses.length)]
+         });
+      }
 
-      const newOrders = [
-        { hotel_id: hotelId, booking_id: bData?.[0]?.id || null, order_ref: `ORD-${Math.floor(Math.random()*9000)+1000}`, guest_name: "Alice Smith", room_number: "304", category: 'Room Service', item: "Club Sandwich & Fries", status: 'Preparing' },
-        { hotel_id: hotelId, booking_id: null, order_ref: `ORD-${Math.floor(Math.random()*9000)+1000}`, guest_name: "Charlie Brown", room_number: "201", category: 'Housekeeping', item: "Extra Towels", status: 'Pending' }
-      ];
+      const { data: bData, error: bErr } = await supabase.from("bookings").insert(newBookings).select();
+      if (bErr) throw new Error("Failed to insert bookings: " + bErr.message);
 
-      await supabase.from("orders").insert(newOrders);
+      const newOrders = [];
+      for (let i = 0; i < 30; i++) {
+         const hasBooking = Math.random() > 0.3 && bData && bData.length > 0;
+         const b = hasBooking ? bData![Math.floor(Math.random() * bData!.length)] : null;
+         newOrders.push({
+           hotel_id: hotelId,
+           session_id: `ORD-${Math.floor(Math.random()*90000)+10000}`,
+           room_number: `${Math.floor(Math.random() * 5) + 1}0${Math.floor(Math.random() * 9)}`,
+           items: [{ name: items[Math.floor(Math.random() * items.length)], qty: 1 }],
+           total_amount: Math.floor(Math.random() * 80) + 10,
+           status: orderStatuses[Math.floor(Math.random() * orderStatuses.length)]
+         });
+      }
+
+      const { error: oErr } = await supabase.from("orders").insert(newOrders);
+      if (oErr) throw new Error("Failed to insert orders: " + oErr.message);
+
       await fetchData();
-    } catch (err) {
+      showToast("Successfully generated bulk demo data!", "success");
+    } catch (err: any) {
       console.error("Failed to seed data", err);
+      showToast(err.message || "Failed to generate demo data. Did you run the migration?", "error");
     }
     setSeeding(false);
   };
 
-  const updateOrderStatus = async (id: string, newStatus: OrderStatus) => {
+  const updateOrderStatus = async (id: string, newStatus: string) => {
     try {
       await supabase.from("orders").update({ status: newStatus }).eq("id", id);
       setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
@@ -112,7 +144,8 @@ export function BookingsTab() {
 
   // Status Badge Helper
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    const s = status?.charAt(0).toUpperCase() + status?.slice(1).toLowerCase();
+    switch (s) {
       case 'Confirmed':
       case 'Completed':
         return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
@@ -247,7 +280,7 @@ export function BookingsTab() {
                         onClick={() => setSelectedBooking(bk)}
                         className="hover:bg-dash-surface-hover transition-colors group cursor-pointer"
                       >
-                        <td className="p-4 text-sm font-mono text-dash-text-muted">{bk.booking_ref}</td>
+                        <td className="p-4 text-sm font-mono text-dash-text-muted">{bk.booking_reference}</td>
                         <td className="p-4 text-sm font-medium text-dash-text flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full bg-dash-canvas border border-dash-border flex items-center justify-center">
                             <User className="w-3 h-3 text-dash-text-muted" />
@@ -318,7 +351,9 @@ export function BookingsTab() {
           <div className="flex-1 flex flex-col h-full bg-dash-canvas/30 p-4">
              {/* Kanban Board */}
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
-                {(['Pending', 'Preparing', 'Completed'] as OrderStatus[]).map(status => (
+                {(['Pending', 'Preparing', 'Completed'] as const).map(status => {
+                  const matchFn = (o: Order) => o.status?.toLowerCase() === status.toLowerCase();
+                  return (
                   <div key={status} className="flex flex-col h-full bg-dash-surface rounded-xl border border-dash-border shadow-sm overflow-hidden">
                      <div className="p-3 border-b border-dash-border bg-dash-canvas/50 flex justify-between items-center">
                         <h4 className="text-sm font-semibold text-dash-text flex items-center gap-2">
@@ -328,22 +363,21 @@ export function BookingsTab() {
                            {status}
                         </h4>
                         <span className="text-xs font-mono bg-dash-canvas border border-dash-border rounded-full px-2 py-0.5 text-dash-text-muted">
-                          {orders.filter(o => o.status === status).length}
+                          {orders.filter(matchFn).length}
                         </span>
                      </div>
                      <div className="p-3 flex-1 overflow-y-auto space-y-3">
-                        {orders.filter(o => o.status === status).map(order => (
+                        {orders.filter(matchFn).map(order => (
                            <div 
                               key={order.id} 
                               onClick={() => setSelectedOrder(order)}
                               className="bg-dash-canvas border border-dash-border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer group hover:-translate-y-0.5"
                            >
                               <div className="flex justify-between items-start mb-2">
-                                 <span className="text-[10px] font-mono text-dash-text-muted">{order.order_ref}</span>
+                                 <span className="text-[10px] font-mono text-dash-text-muted">{order.session_id}</span>
                                  <span className="text-[10px] font-bold text-dash-green bg-dash-green/10 px-1.5 py-0.5 rounded">{order.room_number}</span>
                               </div>
-                              <p className="text-sm font-medium text-dash-text mb-1">{order.item}</p>
-                              <p className="text-xs text-dash-text-sec mb-3">{order.guest_name}</p>
+                              <p className="text-sm font-medium text-dash-text mb-1">{order.items?.[0]?.name || "Order"}</p>
                               
                               {status !== 'Completed' && (
                                 <div className="pt-3 border-t border-dash-border flex justify-end">
@@ -362,7 +396,7 @@ export function BookingsTab() {
                         ))}
                      </div>
                   </div>
-                ))}
+                )})}
              </div>
           </div>
         )}
@@ -398,7 +432,7 @@ export function BookingsTab() {
                            <User className="w-8 h-8 text-dash-text-muted" />
                         </div>
                         <h2 className="text-xl font-bold text-dash-text">{selectedBooking.guest_name}</h2>
-                        <p className="text-sm font-mono text-dash-text-sec mt-1">{selectedBooking.booking_ref}</p>
+                        <p className="text-sm font-mono text-dash-text-sec mt-1">{selectedBooking.booking_reference}</p>
                         <div className="mt-3 inline-flex">
                           <span className={`px-3 py-1 rounded-full border text-xs font-semibold tracking-wide ${getStatusBadge(selectedBooking.status)}`}>
                             {selectedBooking.status}
@@ -443,16 +477,16 @@ export function BookingsTab() {
                    <>
                       <div className="pb-6 border-b border-dash-border">
                          <div className="flex justify-between items-start mb-4">
-                            <span className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold tracking-wide ${getStatusBadge(selectedOrder.status)}`}>
+                            <span className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold tracking-wide ${getStatusBadge(selectedOrder.status as any)}`}>
                               {selectedOrder.status}
                             </span>
-                            <span className="text-sm font-mono text-dash-text-muted">{selectedOrder.order_ref}</span>
+                            <span className="text-sm font-mono text-dash-text-muted">{selectedOrder.session_id}</span>
                          </div>
-                         <h2 className="text-2xl font-bold text-dash-text mb-2">{selectedOrder.item}</h2>
+                         <h2 className="text-2xl font-bold text-dash-text mb-2">{selectedOrder.items?.[0]?.name || "Order"}</h2>
                          <div className="flex items-center gap-2 text-sm text-dash-text-sec">
-                            <span className="font-bold text-dash-green bg-dash-green/10 px-2 py-0.5 rounded">{selectedOrder.room_number}</span>
+                            <span className="font-bold text-dash-green bg-dash-green/10 px-2 py-0.5 rounded">Room {selectedOrder.room_number}</span>
                             &bull;
-                            <span>{selectedOrder.guest_name}</span>
+                            <span className="font-mono">${selectedOrder.total_amount?.toFixed(2) || '0.00'}</span>
                          </div>
                       </div>
 

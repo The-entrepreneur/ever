@@ -29,7 +29,10 @@ import {
   Bell
 } from "lucide-react";
 import { useTheme } from "../../shared/ThemeProvider";
-
+import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../shared/ToastContext";
+import { seedDemoData } from "../../lib/seeder";
 import { DashboardTab } from "./console-tabs/DashboardTab";
 import { InboxTab } from "./console-tabs/InboxTab";
 import { CRMTab } from "./console-tabs/CRMTab";
@@ -131,10 +134,13 @@ export function Console() {
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
-  // Registration data points state (simulated from what we collect)
+  const { user, hotelId, signOut } = useAuth();
+  const { showToast } = useToast();
+  
+  // Registration data points state
   const [propertyProfile, setPropertyProfile] = useState({
     mobileNumber: "+1 (555) 382-9102",
-    role: "General Manager",
+    role: "hotel_manager",
     businessAddress: "742 Evergreen Terrace, Paris, France",
     propertyType: "Resort" as string,
     propertyName: "The Grand Horizon Resort",
@@ -176,28 +182,56 @@ export function Console() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Load from localStorage if present (e.g. from sign up page)
+  const [seeding, setSeeding] = useState(false);
+
+  // Load from Supabase
   useEffect(() => {
-    const saved = localStorage.getItem("ever_signup_form");
-    if (saved) {
+    async function loadProfile() {
+      if (!user?.id) return;
       try {
-        const parsed = JSON.parse(saved);
-        setPropertyProfile(prev => ({
-          ...prev,
-          fullName: parsed.fullName || parsed.firstName ? `${parsed.firstName} ${parsed.lastName}` : prev.fullName,
-          email: parsed.email || prev.email,
-          propertyName: parsed.property || prev.propertyName,
-          pms: parsed.pms || prev.pms,
-          mobileNumber: parsed.mobileNumber || prev.mobileNumber || "+1 (555) 382-9102",
-          role: parsed.role || prev.role || "General Manager",
-          businessAddress: parsed.businessAddress || prev.businessAddress || "742 Evergreen Terrace, Paris, France",
-          propertyType: parsed.propertyType || prev.propertyType || "Resort"
-        }));
-      } catch (e) {
-        console.error(e);
+        const { data, error } = await supabase
+          .from("users")
+          .select("*, hotels(*)")
+          .eq("id", user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          setPropertyProfile({
+            fullName: data.full_name || "",
+            email: data.email || "",
+            role: data.role || "hotel_manager",
+            propertyName: data.hotels?.name || "My Hotel",
+            propertyType: "Resort",
+            pms: "cloudbeds",
+            businessAddress: "123 Default Street",
+            mobileNumber: "+1 (555) 000-0000"
+          });
+          
+          // Auto-seed if completely empty AND is a designated sandbox account
+          const sandboxEmails = ['dero@ever.com', 'demo@ever.com', 'test@ever.com'];
+          if (data.hotel_id && data.email && sandboxEmails.includes(data.email.toLowerCase())) {
+            const { count } = await supabase.from("leads").select("*", { count: "exact", head: true }).eq("hotel_id", data.hotel_id);
+            if (count === 0) {
+              setSeeding(true);
+              try {
+                await seedDemoData(data.hotel_id);
+                showToast("Sandbox data auto-seeded successfully!", "success");
+              } catch (e) {
+                console.error("Auto-seed failed", e);
+              } finally {
+                setSeeding(false);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error loading profile:", err);
       }
     }
-  }, []);
+    loadProfile();
+  }, [user?.id]);
 
   const handleSaveProfileModal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -694,9 +728,32 @@ export function Console() {
                   </select>
                 </div>
               </div>
-              <div className="pt-2 flex justify-end gap-2">
-                <button type="button" onClick={() => setIsPropertyModalOpen(false)} className="px-4 py-1.5 text-xs font-medium text-dash-text-sec hover:text-dash-text transition-colors">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-dash-surface text-dash-text rounded-md text-xs font-medium hover:bg-dash-surface-raised transition-colors">Save Settings</button>
+              <div className="pt-2 flex justify-between gap-2 border-t border-dash-border-hairline mt-4 pt-4">
+                <button 
+                  type="button" 
+                  onClick={async () => {
+                    if (window.confirm("Are you sure you want to delete all current data and regenerate fresh demo data?")) {
+                      setSeeding(true);
+                      try {
+                        if (hotelId) await seedDemoData(hotelId);
+                        showToast("Sandbox data regenerated successfully!", "success");
+                        setIsPropertyModalOpen(false);
+                      } catch (e) {
+                        showToast("Failed to regenerate data.", "error");
+                      } finally {
+                        setSeeding(false);
+                      }
+                    }
+                  }}
+                  disabled={seeding}
+                  className="px-4 py-1.5 bg-red-600/10 text-red-600 rounded-md text-xs font-medium hover:bg-red-600/20 transition-colors disabled:opacity-50"
+                >
+                  {seeding ? "Regenerating..." : "Regenerate Demo Data"}
+                </button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setIsPropertyModalOpen(false)} className="px-4 py-1.5 text-xs font-medium text-dash-text-sec hover:text-dash-text transition-colors">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-dash-surface text-dash-text rounded-md text-xs font-medium hover:bg-dash-surface-raised transition-colors">Save Settings</button>
+                </div>
               </div>
             </form>
           </div>
