@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../context/AuthContext";
+import { useSandbox } from "../../../context/SandboxDataContext";
 import { useToast } from "../../../shared/ToastContext";
 import { Modal } from "../../../shared/Modal";
 
@@ -80,6 +81,7 @@ function StatusChip({ status }: { status: string | null }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function InboxTab({ initialSessionId }: { initialSessionId?: string | null }) {
   const { hotelId, user } = useAuth();
+  const { isSandbox, data: sandboxData, regenerate } = useSandbox();
   const { showToast } = useToast();
   const [activeFilter, setActiveFilter] = useState("All");
   const [conversations, setConversations] = useState<InboxSession[]>([]);
@@ -99,6 +101,19 @@ export function InboxTab({ initialSessionId }: { initialSessionId?: string | nul
   // Load conversation list
   const fetchConversations = async () => {
     if (!hotelId) return;
+
+    if (isSandbox && sandboxData) {
+      const data = sandboxData.conversations || [];
+      setConversations(data as InboxSession[]);
+      if (initialSessionId) {
+        setSelectedConvId(initialSessionId);
+      } else if (!selectedConvId && data.length > 0) {
+        setSelectedConvId(data[0].session_id);
+      }
+      setIsRealtime(true);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from("inbox_sessions")
@@ -127,7 +142,7 @@ export function InboxTab({ initialSessionId }: { initialSessionId?: string | nul
   }, [hotelId, initialSessionId]);
 
   useEffect(() => {
-    if (!hotelId) return;
+    if (!hotelId || isSandbox) return;
 
     // Subscriptions for real-time live inbox updates
     const filterConversations = `client_id=eq.${hotelId}`;
@@ -170,6 +185,13 @@ export function InboxTab({ initialSessionId }: { initialSessionId?: string | nul
 
     const loadMessages = async () => {
       try {
+        if (isSandbox && sandboxData) {
+          const chatMsgs = (sandboxData.messages?.[selectedConvId] || []);
+          setMessages(chatMsgs as ChatMessage[]);
+          setIsLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase
           .from("conversations")
           .select("*")
@@ -188,7 +210,7 @@ export function InboxTab({ initialSessionId }: { initialSessionId?: string | nul
     };
 
     loadMessages();
-  }, [selectedConvId]);
+  }, [selectedConvId, isSandbox, sandboxData]);
 
   // Derive agent mode from the current selected conversation's handoff status
   useEffect(() => {
@@ -332,9 +354,14 @@ export function InboxTab({ initialSessionId }: { initialSessionId?: string | nul
 
         <div className="flex-1 overflow-y-auto divide-y divide-dash-border-hairline">
           {filteredConvs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-dash-text-muted text-xs gap-2">
+            <div className="flex flex-col items-center justify-center h-full text-dash-text-muted text-xs gap-2 p-6 text-center">
               <MessageSquare className="w-8 h-8 opacity-30" />
               <span>No conversations</span>
+              {isSandbox && (
+                <button onClick={regenerate} className="mt-4 px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-md text-[10px] font-medium hover:opacity-90 transition-opacity flex items-center gap-1.5">
+                  <RefreshCw className="w-3.5 h-3.5" /> Regenerate Demo Data
+                </button>
+              )}
             </div>
           ) : (
             filteredConvs.map((conv) => (

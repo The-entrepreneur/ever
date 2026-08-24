@@ -31,8 +31,8 @@ import {
 import { useTheme } from "../../shared/ThemeProvider";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
+import { useSandbox } from "../../context/SandboxDataContext";
 import { useToast } from "../../shared/ToastContext";
-import { seedDemoData } from "../../lib/seeder";
 import { DashboardTab } from "./console-tabs/DashboardTab";
 import { InboxTab } from "./console-tabs/InboxTab";
 import { CRMTab } from "./console-tabs/CRMTab";
@@ -70,6 +70,7 @@ function urlBase64ToUint8Array(base64String: string) {
 export function Console() {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const { isSandbox, regenerate } = useSandbox();
   const [activeTab, setActiveTab] = useState<"dashboard" | "inbox" | "crm" | "knowledge_base" | "agent_settings" | "channels" | "staff" | "bookings" | "analytics" | "feedback" | "compliance" | "billing">("dashboard");
   const [inboxTargetId, setInboxTargetId] = useState<string | null>(null);
   
@@ -209,22 +210,7 @@ export function Console() {
             mobileNumber: "+1 (555) 000-0000"
           });
           
-          // Auto-seed if completely empty AND is a designated sandbox account
-          const sandboxEmails = ['dero@ever.com', 'demo@ever.com', 'test@ever.com'];
-          if (data.hotel_id && data.email && sandboxEmails.includes(data.email.toLowerCase())) {
-            const { count } = await supabase.from("leads").select("*", { count: "exact", head: true }).eq("hotel_id", data.hotel_id);
-            if (count === 0) {
-              setSeeding(true);
-              try {
-                await seedDemoData(data.hotel_id);
-                showToast("Sandbox data auto-seeded successfully!", "success");
-              } catch (e) {
-                console.error("Auto-seed failed", e);
-              } finally {
-                setSeeding(false);
-              }
-            }
-          }
+
         }
       } catch (err) {
         console.error("Error loading profile:", err);
@@ -729,27 +715,21 @@ export function Console() {
                 </div>
               </div>
               <div className="pt-2 flex justify-between gap-2 border-t border-dash-border-hairline mt-4 pt-4">
-                <button 
-                  type="button" 
-                  onClick={async () => {
-                    if (window.confirm("Are you sure you want to delete all current data and regenerate fresh demo data?")) {
-                      setSeeding(true);
-                      try {
-                        if (hotelId) await seedDemoData(hotelId);
+                {isSandbox && (
+                  <button 
+                    type="button" 
+                    onClick={async () => {
+                      if (window.confirm("Are you sure you want to delete all current data and regenerate fresh demo data?")) {
+                        regenerate();
                         showToast("Sandbox data regenerated successfully!", "success");
                         setIsPropertyModalOpen(false);
-                      } catch (e) {
-                        showToast("Failed to regenerate data.", "error");
-                      } finally {
-                        setSeeding(false);
                       }
-                    }
-                  }}
-                  disabled={seeding}
-                  className="px-4 py-1.5 bg-red-600/10 text-red-600 rounded-md text-xs font-medium hover:bg-red-600/20 transition-colors disabled:opacity-50"
-                >
-                  {seeding ? "Regenerating..." : "Regenerate Demo Data"}
-                </button>
+                    }}
+                    className="px-4 py-1.5 bg-red-600/10 text-red-600 rounded-md text-xs font-medium hover:bg-red-600/20 transition-colors"
+                  >
+                    Regenerate Demo Data
+                  </button>
+                )}
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setIsPropertyModalOpen(false)} className="px-4 py-1.5 text-xs font-medium text-dash-text-sec hover:text-dash-text transition-colors">Cancel</button>
                   <button type="submit" className="px-4 py-1.5 bg-dash-surface text-dash-text rounded-md text-xs font-medium hover:bg-dash-surface-raised transition-colors">Save Settings</button>

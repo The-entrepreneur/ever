@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../context/AuthContext";
+import { useSandbox } from "../../../context/SandboxDataContext";
 import { useToast } from "../../../shared/ToastContext";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ export function BookingsTab() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [seeding, setSeeding] = useState(false);
+  const { isSandbox, data: sandboxData, regenerate } = useSandbox();
 
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -57,6 +58,13 @@ export function BookingsTab() {
   }, [hotelId]);
 
   const fetchData = async () => {
+    if (isSandbox && sandboxData) {
+      setBookings(sandboxData.bookings as Booking[]);
+      setOrders(sandboxData.orders as Order[]);
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
       const [bookingsRes, ordersRes] = await Promise.all([
@@ -69,68 +77,6 @@ export function BookingsTab() {
       console.error("Error fetching bookings/orders:", err);
     }
     setLoading(false);
-  };
-
-  const seedMockData = async () => {
-    if (!hotelId) return;
-    setSeeding(true);
-    try {
-      const today = new Date();
-      const formatYMD = (d: Date) => d.toISOString().split('T')[0];
-      
-      const names = ["Alice Smith", "Bob Johnson", "Charlie Brown", "David Lee", "Emma Davis", "Fiona Gallagher", "George Miller", "Hannah White", "Ian Black", "Julia Roberts"];
-      const roomTypes = ["Deluxe Ocean View", "Standard King", "Presidential Suite", "Family Suite", "Double Queen"];
-      const statuses: BookingStatus[] = ['Confirmed', 'Pending', 'Cancelled'];
-      const orderStatuses: OrderStatus[] = ['Pending', 'Preparing', 'Completed'];
-      const categories: OrderCategory[] = ['Room Service', 'Housekeeping', 'Maintenance'];
-      const items = ["Club Sandwich", "Extra Towels", "Room Cleaning", "Heineken Beer", "Spa Massage", "Airport Transfer", "Pillows", "Coffee & Croissant"];
-
-      const newBookings = [];
-      for (let i = 0; i < 25; i++) {
-         const offset = Math.floor(Math.random() * 20) - 5; // -5 to +15 days
-         const duration = Math.floor(Math.random() * 5) + 1;
-         const checkIn = new Date(today); checkIn.setDate(today.getDate() + offset);
-         const checkOut = new Date(checkIn); checkOut.setDate(checkIn.getDate() + duration);
-         
-         newBookings.push({
-           hotel_id: hotelId,
-           booking_reference: `BK-${Math.floor(Math.random()*90000)+10000}`,
-           guest_name: names[Math.floor(Math.random() * names.length)],
-           room_type: roomTypes[Math.floor(Math.random() * roomTypes.length)],
-           check_in: formatYMD(checkIn),
-           check_out: formatYMD(checkOut),
-           total_amount: Math.floor(Math.random() * 2000) + 150,
-           status: statuses[Math.floor(Math.random() * statuses.length)]
-         });
-      }
-
-      const { data: bData, error: bErr } = await supabase.from("bookings").insert(newBookings).select();
-      if (bErr) throw new Error("Failed to insert bookings: " + bErr.message);
-
-      const newOrders = [];
-      for (let i = 0; i < 30; i++) {
-         const hasBooking = Math.random() > 0.3 && bData && bData.length > 0;
-         const b = hasBooking ? bData![Math.floor(Math.random() * bData!.length)] : null;
-         newOrders.push({
-           hotel_id: hotelId,
-           session_id: `ORD-${Math.floor(Math.random()*90000)+10000}`,
-           room_number: `${Math.floor(Math.random() * 5) + 1}0${Math.floor(Math.random() * 9)}`,
-           items: [{ name: items[Math.floor(Math.random() * items.length)], qty: 1 }],
-           total_amount: Math.floor(Math.random() * 80) + 10,
-           status: orderStatuses[Math.floor(Math.random() * orderStatuses.length)]
-         });
-      }
-
-      const { error: oErr } = await supabase.from("orders").insert(newOrders);
-      if (oErr) throw new Error("Failed to insert orders: " + oErr.message);
-
-      await fetchData();
-      showToast("Successfully generated bulk demo data!", "success");
-    } catch (err: any) {
-      console.error("Failed to seed data", err);
-      showToast(err.message || "Failed to generate demo data. Did you run the migration?", "error");
-    }
-    setSeeding(false);
   };
 
   const updateOrderStatus = async (id: string, newStatus: string) => {
@@ -231,15 +177,15 @@ export function BookingsTab() {
               <CalendarIcon className="w-8 h-8 text-dash-text-muted" />
             </div>
             <h3 className="text-header font-semibold text-dash-text mb-1">No Data Found</h3>
-            <p className="text-body text-dash-text-sec mb-6 max-w-sm">There are currently no bookings or orders for this hotel in the database.</p>
-            <button 
-              onClick={seedMockData}
-              disabled={seeding}
-              className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
-            >
-              {seeding ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              {seeding ? "Generating..." : "Generate Demo Data"}
-            </button>
+            <p className="text-body text-dash-text-sec mb-6 max-w-sm">No bookings or orders available.</p>
+            {isSandbox && (
+              <button 
+                onClick={regenerate}
+                className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" /> Regenerate Demo Data
+              </button>
+            )}
           </div>
         ) : activeSubTab === "bookings" ? (
           <>

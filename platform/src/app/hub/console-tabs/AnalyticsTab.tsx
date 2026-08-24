@@ -8,6 +8,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import { useAuth } from "../../../context/AuthContext";
+import { useSandbox } from "../../../context/SandboxDataContext";
 import { useToast } from "../../../shared/ToastContext";
 
 // ─── Shared Theme Colors ──────────────────────────────────────────────────
@@ -46,62 +47,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export function AnalyticsTab() {
   const { user, subscriptionStatus } = useAuth();
   const { showToast } = useToast();
-  
+  const { isSandbox, data: sandboxData, regenerate } = useSandbox();
   const [dateRange, setDateRange] = useState("Last 30 Days");
-  const [seeding, setSeeding] = useState(false);
-  const [dataGenerated, setDataGenerated] = useState(false);
+  const isLevel2 = subscriptionStatus === "level_2" || subscriptionStatus === "active" || isSandbox;
 
-  // ─── Access & Tier Logic ──────────────────────────────────────────────
-  const isSandbox = user?.email?.toLowerCase().includes("dero") || 
-                    user?.email?.toLowerCase().includes("test") || 
-                    user?.email?.toLowerCase().includes("demo");
-                    
-  // Assume L2 features (Bookings, Orders) are for Growth/Pro tiers, or Sandbox
-  const isLevel2 = subscriptionStatus === "pro" || subscriptionStatus === "enterprise" || subscriptionStatus === "growth" || isSandbox;
-
-  // ─── Mock Data Generators ─────────────────────────────────────────────
-  const generateData = () => {
-    // Generate 30 days of daily data
-    const days = [];
-    let baseVolume = 150;
-    
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      
-      // Random walk for volume
-      baseVolume = Math.max(50, baseVolume + (Math.random() - 0.4) * 40);
-      
-      const botCount = Math.floor(baseVolume * (0.8 + Math.random() * 0.15));
-      const agentCount = Math.floor(baseVolume - botCount);
-      const handoffRate = (agentCount / baseVolume) * 100;
-      
-      const enquired = Math.floor(baseVolume * 0.4);
-      const booked = Math.floor(enquired * 0.15);
-      const bookingValue = booked * 250;
-      const feeAmount = bookingValue * 0.03; // 3% fee
-
-      days.push({
-        date: dateStr,
-        botVolume: botCount,
-        agentVolume: agentCount,
-        totalVolume: Math.floor(baseVolume),
-        faqIntent: Math.floor(baseVolume * 0.5),
-        bookingIntent: Math.floor(baseVolume * 0.3),
-        handoffIntent: agentCount,
-        orderIntent: Math.floor(baseVolume * 0.1),
-        handoffRate: parseFloat(handoffRate.toFixed(1)),
-        feedbackScore: parseFloat((4.2 + (Math.random() * 0.6 - 0.3)).toFixed(1)),
-        bookedCount: booked,
-        bookingValue: parseFloat(bookingValue.toFixed(2)),
-        feeAmount: parseFloat(feeAmount.toFixed(2)),
-      });
-    }
-    return days;
-  };
-
-  const timeSeriesData = useMemo(() => dataGenerated ? generateData() : [], [dataGenerated, dateRange]);
+  const timeSeriesData = useMemo(() => isSandbox ? (sandboxData?.analyticsData || []) : [], [isSandbox, sandboxData, dateRange]);
 
   // Channel Distribution
   const channelData = [
@@ -148,14 +98,7 @@ export function AnalyticsTab() {
     { name: "Spa Package", offered: 310, accepted: 28, rate: "9.0%", revenue: "$4,200" },
   ];
 
-  const handleSeed = () => {
-    setSeeding(true);
-    setTimeout(() => {
-      setDataGenerated(true);
-      setSeeding(false);
-      showToast("Generated 30 days of mock analytics data", "success");
-    }, 800);
-  };
+
 
   return (
     <div className="p-3 md:p-5 space-y-4 h-full flex flex-col relative overflow-hidden dashboard-interactive overflow-y-auto">
@@ -169,12 +112,11 @@ export function AnalyticsTab() {
         <div className="flex gap-2 w-full sm:w-auto">
           {isSandbox && (
             <button 
-              onClick={handleSeed}
-              disabled={seeding || dataGenerated}
-              className="flex-1 sm:flex-initial h-8 px-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-md text-xs font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 whitespace-nowrap disabled:opacity-50"
+              onClick={regenerate}
+              className="flex-1 sm:flex-initial h-8 px-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-md text-xs font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 whitespace-nowrap"
             >
-              {seeding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />}
-              {dataGenerated ? "Data Seeded" : "Generate Demo Data"}
+              <RefreshCw className="w-3.5 h-3.5" />
+              Regenerate Demo Data
             </button>
           )}
           <div className="relative flex-1 sm:flex-initial">
@@ -197,16 +139,11 @@ export function AnalyticsTab() {
         </div>
       </div>
 
-      {!dataGenerated ? (
+      {!isSandbox && timeSeriesData.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-dash-border rounded-xl bg-dash-canvas/50 m-4 p-8 text-center min-h-[400px]">
           <BarChart3 className="w-12 h-12 text-dash-text-muted mb-4 opacity-50" />
           <h3 className="text-base font-bold text-dash-text mb-2">No Analytical Data</h3>
           <p className="text-sm text-dash-text-sec max-w-sm mb-6">There is not enough historical data to generate robust analytics for this period.</p>
-          {isSandbox && (
-            <button onClick={handleSeed} className="px-4 py-2 bg-[#EA6639] text-white rounded-lg text-sm font-medium hover:bg-[#d4582e] transition-colors flex items-center gap-2">
-              <Database className="w-4 h-4" /> Seed Sandbox Data
-            </button>
-          )}
         </div>
       ) : (
         <div className="space-y-4 pb-10">
@@ -215,7 +152,7 @@ export function AnalyticsTab() {
             {[
               { label: "Total Messages", value: "14,285", trend: "+24%", icon: MessageSquare },
               { label: "Leads Captured", value: "2,800", trend: "+12%", icon: Users },
-              { label: "Bot Resolution Rate", value: "92.4%", trend: "+1.2%", icon: CheckCircle2 },
+              { label: "Agent Resolution Rate", value: "92.4%", trend: "+1.2%", icon: CheckCircle2 },
               { label: "Avg Response Time", value: "1.2s", trend: "-0.3s", icon: Clock },
               { label: "Booking Revenue (L2)", value: "$42,500", trend: "+18%", icon: DollarSign, isL2: true },
             ].filter(kpi => !kpi.isL2 || isLevel2).map((kpi, i) => (
@@ -241,8 +178,8 @@ export function AnalyticsTab() {
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-sm font-bold text-dash-text">Message Volume</h3>
                 <div className="flex items-center gap-3 text-xs font-medium">
-                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: COLORS.secondary}}/>Bot Resolved</div>
-                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: COLORS.quaternary}}/>Agent Handoff</div>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: COLORS.secondary}}/>Agent Resolved</div>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: COLORS.quaternary}}/>Staff Handoff</div>
                 </div>
               </div>
               <div className="h-72 w-full">
@@ -262,8 +199,8 @@ export function AnalyticsTab() {
                     <XAxis dataKey="date" stroke={COLORS.textMuted} fontSize={10} tickLine={false} axisLine={false} dy={10} />
                     <YAxis stroke={COLORS.textMuted} fontSize={10} tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="botVolume" name="Bot" stroke={COLORS.secondary} strokeWidth={2} fillOpacity={1} fill="url(#colorBot)" />
-                    <Area type="monotone" dataKey="agentVolume" name="Agent" stroke={COLORS.quaternary} strokeWidth={2} fillOpacity={1} fill="url(#colorAgent)" />
+                    <Area type="monotone" dataKey="agentVolume" name="Agent" stroke={COLORS.secondary} strokeWidth={2} fillOpacity={1} fill="url(#colorBot)" />
+                    <Area type="monotone" dataKey="staffVolume" name="Staff (Human)" stroke={COLORS.quaternary} strokeWidth={2} fillOpacity={1} fill="url(#colorAgent)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

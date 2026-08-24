@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Search, Download, Filter, Eye, CheckCircle, RefreshCw, AlertCircle, Phone, Mail, FileText, Calendar, Users, Target } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../context/AuthContext";
+import { useSandbox } from "../../../context/SandboxDataContext";
 import { Modal } from "../../../shared/Modal";
 import { useToast } from "../../../shared/ToastContext";
 
@@ -34,8 +35,30 @@ export function CRMTab() {
   const pageSize = 15;
   const [totalCount, setTotalCount] = useState(0);
 
+  const { isSandbox, data: sandboxData, regenerate } = useSandbox();
+
   const fetchGuests = useCallback(async () => {
     if (!hotelId) return;
+
+    if (isSandbox && sandboxData) {
+      let filtered = sandboxData.leads;
+      if (searchTerm) {
+        const s = searchTerm.toLowerCase();
+        filtered = filtered.filter(l => l.name.toLowerCase().includes(s) || (l.email && l.email.toLowerCase().includes(s)) || (l.phone && l.phone.toLowerCase().includes(s)));
+      }
+      if (statusFilter !== "All") {
+        if (statusFilter === "Action Needed") {
+          filtered = filtered.filter(l => l.status === "captured");
+        } else {
+          filtered = filtered.filter(l => l.status === statusFilter.toLowerCase());
+        }
+      }
+      setTotalCount(filtered.length);
+      setLeads(filtered.slice(page * pageSize, (page + 1) * pageSize));
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -83,6 +106,13 @@ export function CRMTab() {
     const actualStatus = newStatus === "" ? "captured" : newStatus;
     
     try {
+      if (isSandbox) {
+        // Just update local state for sandbox mode
+        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: actualStatus } : l));
+        showToast(`Status updated to ${actualStatus}`, 'success');
+        return;
+      }
+      
       setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: actualStatus } : l));
       
       const { error } = await supabase
@@ -182,16 +212,26 @@ export function CRMTab() {
               <span className="text-xs">Loading leads...</span>
             </div>
           ) : leads.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-dash-text-muted space-y-3 p-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-dash-canvas flex items-center justify-center mb-2">
-                <FileText className="w-6 h-6 text-dash-text-sec opacity-50" />
+            <div className="flex-1 flex flex-col items-center justify-center bg-dash-canvas/30 text-center p-6">
+              <div className="w-16 h-16 bg-dash-surface border border-dash-border rounded-2xl flex items-center justify-center shadow-sm mb-4">
+                <Users className="w-8 h-8 text-dash-text-muted" />
               </div>
-              <p className="text-body font-medium text-dash-text">No leads found</p>
-              <p className="text-xs text-dash-text-sec max-w-sm">
-                {searchTerm || statusFilter !== "All" 
-                  ? "Try adjusting your search or filters to see results." 
-                  : "Leads captured by Ever AI will automatically appear here."}
+              <h3 className="text-header font-semibold text-dash-text mb-1">No Leads Found</h3>
+              <p className="text-body text-dash-text-sec mb-6 max-w-sm">
+                {isSandbox 
+                  ? "No potential guests match your current filters." 
+                  : "Try adjusting your search or filters to see results."}
               </p>
+              {isSandbox && (
+                <button onClick={regenerate} className="px-4 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2 mb-6">
+                  <RefreshCw className="w-4 h-4" /> Regenerate Demo Data
+                </button>
+              )}
+              {!isSandbox && (
+                <p className="text-xs text-dash-text-sec max-w-sm">
+                  Leads captured by Ever AI will automatically appear here.
+                </p>
+              )}
               {(searchTerm || statusFilter !== "All") && (
                 <button 
                   onClick={() => { setSearchTerm(""); setStatusFilter("All"); }}

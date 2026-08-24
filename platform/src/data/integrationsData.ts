@@ -1,4 +1,4 @@
-import { Integration } from "../components/Integrations";
+import { Integration } from "../app/marketing/Integrations";
 
 export const integrationsData: Integration[] = [
   {

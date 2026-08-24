@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../context/AuthContext";
+import { useSandbox } from "../../../context/SandboxDataContext";
 import { useToast } from "../../../shared/ToastContext";
 
 type SubTab = "FAQs" | "Rooms" | "Upsells";
@@ -74,48 +75,14 @@ const textareaCls = `${inputCls} resize-none`;
 const btnPrimaryCls = "px-4 py-2 bg-[#EA6639] text-white rounded-lg text-sm font-medium hover:bg-[#d4582e] transition-colors disabled:opacity-50";
 const btnSecCls = "px-4 py-2 bg-dash-surface border border-dash-border text-dash-text rounded-lg text-sm font-medium hover:bg-dash-surface-hover transition-colors";
 
-// ─── Seed Data ──────────────────────────────────────────────────────────────
-const SEED_FAQS = [
-  { question: "What time is check-in and check-out?", answer: "Check-in is from 3:00 PM and check-out is by 11:00 AM. Early check-in and late check-out may be available upon request, subject to availability.", category: "General" },
-  { question: "Is breakfast included in the room rate?", answer: "Our bed & breakfast packages include a complimentary continental or buffet breakfast. Room-only rates do not include breakfast, but it can be added for an additional charge.", category: "Dining" },
-  { question: "Do you have parking facilities?", answer: "Yes, we offer both self-parking and valet parking. Self-parking is complimentary for hotel guests, and valet parking is available for a daily fee.", category: "Facilities" },
-  { question: "Is there a swimming pool?", answer: "Yes, we have an outdoor infinity pool open daily from 7:00 AM to 9:00 PM. Pool towels are provided complimentary at the poolside.", category: "Facilities" },
-  { question: "Do you offer airport shuttle service?", answer: "Yes, we provide a complimentary airport shuttle service. Please contact the front desk at least 24 hours in advance to schedule your pickup.", category: "Transport" },
-  { question: "What is your cancellation policy?", answer: "Free cancellation up to 48 hours before the check-in date. Cancellations within 48 hours will incur a charge equal to one night's stay.", category: "Policies" },
-  { question: "Do you allow pets?", answer: "We welcome small pets (under 10kg) in select pet-friendly rooms for an additional cleaning fee of $50 per stay. Service animals are always welcome at no extra charge.", category: "Policies" },
-  { question: "Is there a gym or fitness center?", answer: "Yes, our fully equipped fitness center is open 24/7 for hotel guests. We also offer complimentary yoga mats in each room upon request.", category: "Facilities" },
-  { question: "Do you have conference or meeting rooms?", answer: "We have three meeting rooms accommodating 10 to 80 people, equipped with projectors, whiteboards, and high-speed Wi-Fi. Please contact events@hotel.com for bookings.", category: "Events" },
-  { question: "What dining options are available?", answer: "We have a signature restaurant (open for lunch and dinner), a rooftop bar, 24-hour room service, and a poolside café serving light snacks and beverages.", category: "Dining" },
-  { question: "Is Wi-Fi free?", answer: "Yes, high-speed Wi-Fi is complimentary throughout the hotel, including all guest rooms, lobby, and common areas.", category: "General" },
-  { question: "Do you offer laundry services?", answer: "Yes, same-day laundry and dry cleaning services are available. Items collected before 9:00 AM will be returned by 6:00 PM the same day.", category: "Services" },
-];
-
-const SEED_ROOMS = [
-  { room_id: "STD-K", type: "Standard King", rate: 150.00, capacity: 2, description: "A comfortable room featuring a king-size bed, work desk, 42\" smart TV, and city views. Perfect for solo travellers or couples.", amenities: ["King Bed", "Smart TV", "Mini Fridge", "Work Desk", "Free Wi-Fi", "Air Conditioning"], available: true },
-  { room_id: "STD-T", type: "Standard Twin", rate: 140.00, capacity: 2, description: "Twin room with two single beds, ideal for friends or colleagues travelling together. Includes all standard amenities.", amenities: ["Twin Beds", "Smart TV", "Mini Fridge", "Work Desk", "Free Wi-Fi", "Air Conditioning"], available: true },
-  { room_id: "DLX-OV", type: "Deluxe Ocean View", rate: 280.00, capacity: 2, description: "Spacious deluxe room with floor-to-ceiling windows offering stunning ocean panoramas. Features a seating area and premium bathroom.", amenities: ["King Bed", "Ocean View", "Bathtub", "Nespresso Machine", "Smart TV", "Balcony", "Premium Toiletries"], available: true },
-  { room_id: "FAM-S", type: "Family Suite", rate: 350.00, capacity: 4, description: "Generous two-room suite with a master bedroom and a kids' room. Includes a living area and kitchenette.", amenities: ["King Bed", "Bunk Beds", "Kitchenette", "Living Area", "2 Smart TVs", "Board Games", "Sofa Bed"], available: true },
-  { room_id: "PRES", type: "Presidential Suite", rate: 850.00, capacity: 4, description: "Our flagship suite spanning 120sqm with a separate living room, dining area, and a private terrace with panoramic views.", amenities: ["King Bed", "Living Room", "Dining Room", "Private Terrace", "Jacuzzi", "Butler Service", "Premium Bar"], available: true },
-  { room_id: "DLX-GV", type: "Deluxe Garden View", rate: 220.00, capacity: 2, description: "Elegantly appointed room overlooking the lush hotel gardens. Features rain shower and premium bedding.", amenities: ["King Bed", "Garden View", "Rain Shower", "Nespresso Machine", "Smart TV", "Balcony"], available: true },
-  { room_id: "DBL-Q", type: "Double Queen", rate: 200.00, capacity: 4, description: "Comfortable room with two queen-size beds, ideal for families or groups needing extra space.", amenities: ["2 Queen Beds", "Smart TV", "Mini Fridge", "Work Desk", "Free Wi-Fi", "Air Conditioning"], available: false },
-];
-
-const SEED_UPSELLS = [
-  { name: "Romantic Turndown Package", description: "Rose petals, champagne, chocolates, and candlelight arranged in your room before arrival.", price: 120.00, category: "Romance", active: true },
-  { name: "Airport Transfer (Return)", description: "Private sedan transfer to and from the airport. Driver meets you at arrivals with a name sign.", price: 85.00, category: "Transport", active: true },
-  { name: "Late Check-out (until 4 PM)", description: "Extend your stay until 4:00 PM on checkout day. Subject to availability.", price: 50.00, category: "Stay", active: true },
-  { name: "Spa Day Pass", description: "Full-day access to the spa facilities including sauna, steam room, and a 30-minute massage.", price: 150.00, category: "Wellness", active: true },
-  { name: "Breakfast in Bed", description: "Continental or full English breakfast delivered to your room at your chosen time.", price: 35.00, category: "Dining", active: true },
-  { name: "Welcome Fruit Basket", description: "A curated basket of fresh seasonal fruits and artisanal snacks placed in your room.", price: 28.00, category: "Amenities", active: true },
-  { name: "City Tour (Half Day)", description: "Guided half-day tour of top attractions with private transport and a local guide.", price: 95.00, category: "Experiences", active: true },
-  { name: "Premium Wi-Fi Upgrade", description: "Upgrade to 100Mbps dedicated connection for streaming and video calls.", price: 15.00, category: "Technology", active: false },
-];
+// Removed local seed constants
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Main Component
 // ═════════════════════════════════════════════════════════════════════════════
 export function KnowledgeBaseTab({ role }: { role?: string }) {
   const { hotelId } = useAuth();
+  const { isSandbox, data: sandboxData, regenerate } = useSandbox();
   const { showToast } = useToast();
   const [activeSubTab, setActiveSubTab] = useState<SubTab>("FAQs");
   const [search, setSearch] = useState("");
@@ -125,7 +92,6 @@ export function KnowledgeBaseTab({ role }: { role?: string }) {
   const [upsells, setUpsells] = useState<Upsell[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [seeding, setSeeding] = useState(false);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -140,6 +106,15 @@ export function KnowledgeBaseTab({ role }: { role?: string }) {
   // ─── Fetch ──────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     if (!hotelId) return;
+    
+    if (isSandbox && sandboxData) {
+      setFaqs(sandboxData.faqs as FAQ[]);
+      setRooms(sandboxData.rooms as Room[]);
+      setUpsells(sandboxData.upsells as Upsell[]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const [faqRes, roomRes, upsellRes] = await Promise.all([
@@ -155,7 +130,7 @@ export function KnowledgeBaseTab({ role }: { role?: string }) {
     } finally {
       setLoading(false);
     }
-  }, [hotelId]);
+  }, [hotelId, isSandbox, sandboxData]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -301,15 +276,14 @@ export function KnowledgeBaseTab({ role }: { role?: string }) {
                 <Sparkles className="w-8 h-8 text-dash-text-muted" />
               </div>
               <h3 className="text-header font-semibold text-dash-text mb-1">Knowledge Base is Empty</h3>
-              <p className="text-body text-dash-text-sec mb-6 max-w-sm">Seed demo data to see the UI in action, or start adding your own FAQs, rooms and upsells.</p>
-              {!isReadOnly && (
+              <p className="text-body text-dash-text-sec mb-6 max-w-sm">No data available. Add your own FAQs, rooms and upsells.</p>
+              {!isReadOnly && isSandbox && (
                 <button
-                  onClick={seedDemoData}
-                  disabled={seeding}
-                  className="px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
+                  onClick={regenerate}
+                  className="px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
                 >
-                  {seeding ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
-                  {seeding ? "Generating..." : "Generate Demo Data"}
+                  <Database className="w-4 h-4" />
+                  Regenerate Demo Data
                 </button>
               )}
             </div>

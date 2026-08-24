@@ -105,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    sessionStorage.removeItem("ever_sandbox_data_v2");
     await supabase.auth.signOut();
   };
 

@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../context/AuthContext";
+import { useSandbox } from "../../../context/SandboxDataContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface KPI {
@@ -103,11 +104,69 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, contex
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
   const [refreshing, setRefreshing] = useState(false);
 
+  const { isSandbox, data: sandboxData } = useSandbox();
+
   const fetchAll = useCallback(async () => {
     if (!hotelId) return;
     setRefreshing(true);
 
     try {
+      if (isSandbox && sandboxData) {
+        // Read from SandboxDataContext
+        const ad = sandboxData.analyticsData || [];
+        const thirtyDays = ad.slice(-30);
+        
+        let msgCount = 0;
+        let handoffCount = 0;
+        thirtyDays.forEach(d => {
+          msgCount += d.totalVolume;
+          handoffCount += d.staffVolume;
+        });
+        
+        const rate = msgCount > 0 ? Math.round((handoffCount / msgCount) * 100) : 0;
+        const avgRating = thirtyDays.reduce((acc, d) => acc + d.feedbackScore, 0) / (thirtyDays.length || 1);
+        
+        setTotalMessages(msgCount);
+        setTotalLeads(sandboxData.leads.length);
+        setHandoffRate(rate);
+        setActiveSessions(sandboxData.conversations.filter(s => s.handoff_status === 'active').length);
+        setAvgResponseMs(Math.round(1500)); // mock avg
+        setFeedbackScore(Math.round(avgRating * 10) / 10);
+        
+        setRecentHandoffs(sandboxData.conversations.filter(s => s.handoff_status === 'open' || s.handoff_status === 'active').map(s => ({
+          id: s.session_id,
+          session_id: s.session_id,
+          reason: "Human Requested",
+          channel: s.channel,
+          created_at: s.last_message_at
+        })).slice(0, 8));
+        
+        const enquired = sandboxData.leads.length;
+        const captured = sandboxData.leads.filter(l => l.status !== null && l.status !== 'new').length;
+        const contacted = sandboxData.leads.filter(l => ["contacted", "booked"].includes(l.status ?? "")).length;
+        const booked = sandboxData.leads.filter(l => l.status === "booked").length;
+        const lost = sandboxData.leads.filter(l => l.status === "lost").length;
+
+        setFunnelData([
+          { stage: "Enquired", count: enquired, color: "#EA6639" },
+          { stage: "Captured", count: captured, color: "#f97316" },
+          { stage: "Contacted", count: contacted, color: "#7C3AED" },
+          { stage: "Booked", count: booked, color: "#3ECF8E" },
+          { stage: "Lost", count: lost, color: "#ef4444" }
+        ]);
+        
+        const last7 = ad.slice(-7);
+        setMessageChart(last7.map(d => ({
+          day: new Date(d.date).toLocaleDateString("en-US", { weekday: "short" }),
+          messages: d.totalVolume,
+          handoffs: d.staffVolume
+        })));
+        
+        setLoading(false);
+        setRefreshing(false);
+        setLastRefreshed(new Date());
+        return;
+      }
       // Run all queries in parallel
       const [
         messagesRes, leadsRes, handoffsRes, activeRes,
@@ -248,7 +307,7 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, contex
 
   // Supabase Realtime — live session count pulsing
   useEffect(() => {
-    if (!hotelId) return;
+    if (!hotelId || isSandbox) return;
     const channel = supabase
       .channel("dashboard-realtime")
       .on("postgres_changes", {

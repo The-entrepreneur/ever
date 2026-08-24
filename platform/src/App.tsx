@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { ThemeProvider, useTheme } from "./shared/ThemeProvider";
 import { CurrencyProvider } from "./context/CurrencyContext";
 import { AuthProvider } from "./context/AuthContext";
+import { SandboxDataProvider } from "./context/SandboxDataContext";
 import { ToastProvider } from "./shared/ToastContext";
 import { ProtectedRoute } from "./shared/ProtectedRoute";
 import { Navbar } from "./app/marketing/Navbar";
@@ -178,13 +179,15 @@ export default function App() {
     <ThemeProvider defaultTheme="light" storageKey="ever-theme">
       <CurrencyProvider>
         <AuthProvider>
-          <ToastProvider>
-            <BrowserRouter>
-              <ScrollToTop />
-              <PageTitle />
-              <AppLayout />
-            </BrowserRouter>
-          </ToastProvider>
+          <SandboxDataProvider>
+            <ToastProvider>
+              <BrowserRouter>
+                <ScrollToTop />
+                <PageTitle />
+                <AppLayout />
+              </BrowserRouter>
+            </ToastProvider>
+          </SandboxDataProvider>
         </AuthProvider>
       </CurrencyProvider>
     </ThemeProvider>
