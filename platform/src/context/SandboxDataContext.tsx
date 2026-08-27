@@ -55,6 +55,41 @@ export interface SandboxAnalyticsDay {
   bookedCount: number; bookingValue: number;
 }
 
+export interface SandboxFeedback {
+  id: string; session_id: string; guest_name: string; rating: number;
+  comment: string; channel: string; status: string; created_at: string;
+}
+
+export interface SandboxStaff {
+  id: string; full_name: string | null; email: string; role: string;
+  status: string; receive_handoff_alerts: boolean; last_login?: string | null; created_at?: string;
+}
+
+export interface SandboxChannelAccount {
+  id: string; channel: "whatsapp" | "instagram"; display_name?: string;
+  phone_number?: string; phone_number_id?: string; waba_id?: string;
+  ig_username?: string; ig_account_id?: string;
+  status: "connected" | "disconnected"; connected_via?: string; connected_at?: string;
+}
+
+export interface SandboxDpaRecord {
+  id: string; dpa_version: string; signed_by_name: string;
+  signed_by_email: string; signed_at: string; document_url: string;
+}
+
+export interface SandboxSubProcessor {
+  id: string; name: string; purpose: string; region: string; dpa_accepted: boolean;
+}
+
+export interface SandboxDsrRequest {
+  id: string; guest_email: string; request_type: string;
+  status: string; received_at: string; completed_at?: string;
+}
+
+export interface SandboxInvoice {
+  id: string; date: string; period: string; amount: number; status: "Paid" | "Pending";
+}
+
 export interface SandboxData {
   leads: SandboxLead[];
   bookings: SandboxBooking[];
@@ -65,16 +100,24 @@ export interface SandboxData {
   rooms: SandboxRoom[];
   upsells: SandboxUpsell[];
   analyticsData: SandboxAnalyticsDay[];
+  feedback: SandboxFeedback[];
+  staff: SandboxStaff[];
+  channels: SandboxChannelAccount[];
+  dpaRecord: SandboxDpaRecord;
+  subProcessors: SandboxSubProcessor[];
+  dsrRequests: SandboxDsrRequest[];
+  invoices: SandboxInvoice[];
 }
 
 interface SandboxContextType {
   isSandbox: boolean;
   data: SandboxData | null;
   regenerate: () => void;
+  updateData: (updater: (prev: SandboxData) => SandboxData) => void;
 }
 
 const SandboxContext = createContext<SandboxContextType>({
-  isSandbox: false, data: null, regenerate: () => {},
+  isSandbox: false, data: null, regenerate: () => {}, updateData: () => {},
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -156,6 +199,28 @@ const AGENT_REPLIES = [
   "I can see your booking details. Let me look into this for you.",
 ];
 const HANDOFF_STATUSES: (string | null)[] = [null, null, null, "open", "active", "resolved"];
+
+const FEEDBACK_COMMENTS_5 = [
+  "Loved the easy booking process through WhatsApp. Very fast and accurate!",
+  "Ever AI helped me order late night room service in 30 seconds. Impeccable experience.",
+  "Super convenient way to ask for extra towels and get local restaurant tips.",
+  "Checking in was instantaneous. The digital concierge answered all our family queries.",
+  "Outstanding speed! Felt like talking to a human concierge 24/7."
+];
+const FEEDBACK_COMMENTS_4 = [
+  "Bot was helpful, but I needed to speak to a human staff member for billing.",
+  "Great experience overall, very responsive.",
+  "Quick response for amenities, minor delay during peak dinner rush.",
+  "Very friendly tone and accurate directions to the spa."
+];
+const FEEDBACK_COMMENTS_3 = [
+  "Decent response time. Would love more restaurant recommendations.",
+  "Okay experience, worked fine for check-out time questions."
+];
+const FEEDBACK_COMMENTS_2 = [
+  "Room service took longer than estimated. Bot couldn't expedite with kitchen.",
+  "Had to repeat my booking reference twice before human handoff."
+];
 
 // ─── Generator ────────────────────────────────────────────────────────────────
 function generateSandboxData(hotelId: string): SandboxData {
@@ -332,7 +397,93 @@ function generateSandboxData(hotelId: string): SandboxData {
     };
   });
 
-  return { leads, bookings, orders, conversations, messages: messagesMap, faqs, rooms, upsells, analyticsData };
+  // ── 9. Feedback & Reviews (25) ────────────────────────────────────────────
+  const feedback: SandboxFeedback[] = Array.from({ length: 25 }, (_, i) => {
+    const ratingWeights = [5, 5, 5, 5, 4, 4, 3, 2, 5, 4];
+    const rating = sample(ratingWeights);
+    const comment = rating === 5 ? sample(FEEDBACK_COMMENTS_5) :
+                    rating === 4 ? sample(FEEDBACK_COMMENTS_4) :
+                    rating === 3 ? sample(FEEDBACK_COMMENTS_3) : sample(FEEDBACK_COMMENTS_2);
+    return {
+      id: uid(),
+      session_id: `sess_${uid().replace(/-/g, "").slice(0, 12)}`,
+      guest_name: `${sample(FIRST_NAMES)} ${sample(LAST_NAMES)}`,
+      rating,
+      comment,
+      channel: sample(CHANNELS),
+      status: "rated",
+      created_at: rDate(30),
+    };
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  // ── 10. Staff Roster (4) ──────────────────────────────────────────────────
+  const staff: SandboxStaff[] = [
+    { id: uid(), full_name: "Alex Mercer", email: "alex@ever.com", role: "hotel_manager", status: "active", receive_handoff_alerts: true, last_login: new Date().toISOString(), created_at: rDate(120) },
+    { id: uid(), full_name: "Elena Rostova", email: "elena.r@ever.com", role: "hotel_receptionist", status: "active", receive_handoff_alerts: true, last_login: rDate(1), created_at: rDate(90) },
+    { id: uid(), full_name: "Carlos Mendez", email: "carlos.m@ever.com", role: "hotel_receptionist", status: "active", receive_handoff_alerts: true, last_login: rDate(2), created_at: rDate(60) },
+    { id: uid(), full_name: "Sarah Jenkins", email: "sarah.j@ever.com", role: "hotel_readonly", status: "active", receive_handoff_alerts: false, last_login: rDate(5), created_at: rDate(45) },
+  ];
+
+  // ── 11. Channels ──────────────────────────────────────────────────────────
+  const channels: SandboxChannelAccount[] = [
+    {
+      id: uid(),
+      channel: "whatsapp",
+      display_name: "The Grand Horizon Resort",
+      phone_number: "+1 (555) 382-9102",
+      phone_number_id: "10931893198",
+      waba_id: "waba_8491024",
+      status: "connected",
+      connected_via: "openbsp_embedded",
+      connected_at: rDate(60),
+    },
+    {
+      id: uid(),
+      channel: "instagram",
+      display_name: "The Grand Horizon Resort",
+      ig_username: "@grandhorizonresort",
+      ig_account_id: "ig_9273932014",
+      status: "connected",
+      connected_via: "openbsp_embedded",
+      connected_at: rDate(45),
+    }
+  ];
+
+  // ── 12. Compliance (DPA, Sub-processors, DSR) ─────────────────────────────
+  const dpaRecord: SandboxDpaRecord = {
+    id: uid(),
+    dpa_version: "v2.4 (2026 GDPR/NDPA)",
+    signed_by_name: "Alex Mercer",
+    signed_by_email: "alex@ever.com",
+    signed_at: rDate(150),
+    document_url: "#",
+  };
+
+  const subProcessors: SandboxSubProcessor[] = [
+    { id: uid(), name: "Supabase Inc.", purpose: "PostgreSQL Database & Auth hosting", region: "EU (Frankfurt)", dpa_accepted: true },
+    { id: uid(), name: "Google Cloud / Gemini", purpose: "Natural Language AI generation", region: "Global / US-Central", dpa_accepted: true },
+    { id: uid(), name: "Meta Platforms (WhatsApp)", purpose: "WhatsApp Cloud API delivery", region: "Global", dpa_accepted: true },
+    { id: uid(), name: "Stripe Inc.", purpose: "Payment tokenization & transactions", region: "US / EU", dpa_accepted: true },
+    { id: uid(), name: "Twilio Inc.", purpose: "Carrier SMS failover dispatch", region: "Global", dpa_accepted: true },
+  ];
+
+  const dsrRequests: SandboxDsrRequest[] = [
+    { id: uid(), guest_email: "marcus.vance@gmail.com", request_type: "Erasure (GDPR Art. 17)", status: "pending", received_at: rDate(3) },
+    { id: uid(), guest_email: "claire.dupont@orange.fr", request_type: "Data Export (GDPR Art. 20)", status: "completed", received_at: rDate(14), completed_at: rDate(12) },
+  ];
+
+  // ── 13. Invoices ──────────────────────────────────────────────────────────
+  const invoices: SandboxInvoice[] = [
+    { id: "INV-2026-008", date: "Aug 1, 2026", period: "Jul 1 - Jul 31", amount: 726.50, status: "Paid" },
+    { id: "INV-2026-007", date: "Jul 1, 2026", period: "Jun 1 - Jun 30", amount: 654.20, status: "Paid" },
+    { id: "INV-2026-006", date: "Jun 1, 2026", period: "May 1 - May 31", amount: 589.00, status: "Paid" },
+  ];
+
+  return {
+    leads, bookings, orders, conversations, messages: messagesMap,
+    faqs, rooms, upsells, analyticsData, feedback, staff, channels,
+    dpaRecord, subProcessors, dsrRequests, invoices
+  };
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -349,6 +500,15 @@ export const SandboxDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setData(fresh);
   }, [hotelId]);
 
+  const updateData = useCallback((updater: (prev: SandboxData) => SandboxData) => {
+    setData(prev => {
+      if (!prev) return prev;
+      const updated = updater(prev);
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   useEffect(() => {
     if (!isSandbox) { setData(null); return; }
     const cached = sessionStorage.getItem(SESSION_KEY);
@@ -359,7 +519,7 @@ export const SandboxDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [isSandbox, generate]);
 
   return (
-    <SandboxContext.Provider value={{ isSandbox, data, regenerate: generate }}>
+    <SandboxContext.Provider value={{ isSandbox, data, regenerate: generate, updateData }}>
       {children}
     </SandboxContext.Provider>
   );
