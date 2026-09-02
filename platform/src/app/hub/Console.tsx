@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
   Home, 
@@ -26,13 +26,16 @@ import {
   Star,
   ShieldCheck,
   CreditCard,
-  Bell
+  Bell,
+  Sparkles,
+  Check
 } from "lucide-react";
 import { useTheme } from "../../shared/ThemeProvider";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { useSandbox } from "../../context/SandboxDataContext";
 import { useToast } from "../../shared/ToastContext";
+import { SetupWizardModal } from "./SetupWizardModal";
 import { DashboardTab } from "./console-tabs/DashboardTab";
 import { InboxTab } from "./console-tabs/InboxTab";
 import { CRMTab } from "./console-tabs/CRMTab";
@@ -134,21 +137,23 @@ export function Console() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isSetupWizardOpen, setIsSetupWizardOpen] = useState(false);
 
   const { user, hotelId, signOut } = useAuth();
   const { showToast } = useToast();
   
-  // Registration data points state
   const [propertyProfile, setPropertyProfile] = useState({
-    mobileNumber: "+1 (555) 382-9102",
+    mobileNumber: "",
     role: "hotel_manager",
-    businessAddress: "742 Evergreen Terrace, Paris, France",
-    propertyType: "Resort" as string,
-    propertyName: "The Grand Horizon Resort",
-    fullName: "Alex Mercer",
-    email: "alex@boutiquehotel.com",
-    pms: "cloudbeds"
+    businessAddress: "",
+    propertyType: "Hotel" as string,
+    propertyName: "",
+    fullName: "",
+    email: "",
+    pms: ""
   });
+  
+  const [hotelData, setHotelData] = useState<any>(null);
 
   // Temporary states for form editing
   const [tempProfile, setTempProfile] = useState({ fullName: "", email: "", role: "" });
@@ -186,38 +191,55 @@ export function Console() {
   const [seeding, setSeeding] = useState(false);
 
   // Load from Supabase
-  useEffect(() => {
-    async function loadProfile() {
-      if (!user?.id) return;
-      try {
-        const { data, error } = await supabase
-          .from("users")
-          .select("*, hotels(*)")
-          .eq("id", user.id)
-          .single();
-          
-        if (error) throw error;
+  const loadProfile = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*, hotels(*)")
+        .eq("id", user.id)
+        .single();
         
-        if (data) {
-          setPropertyProfile({
-            fullName: data.full_name || "",
-            email: data.email || "",
-            role: data.role || "hotel_manager",
-            propertyName: data.hotels?.name || "My Hotel",
-            propertyType: "Resort",
-            pms: "cloudbeds",
-            businessAddress: "123 Default Street",
-            mobileNumber: "+1 (555) 000-0000"
-          });
-          
+      if (error) throw error;
+      
+      if (data) {
+        const hotelObj = Array.isArray(data.hotels) ? data.hotels[0] : data.hotels;
+        const hotelName = hotelObj?.name || user?.user_metadata?.business_name || "";
+        const hotelAddr = data.business_address || hotelObj?.address || user?.user_metadata?.address || "";
 
+        setPropertyProfile({
+          fullName: data.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || "",
+          email: data.email || user?.email || "",
+          role: data.role || "hotel_manager",
+          propertyName: hotelName,
+          propertyType: data.property_type || user?.user_metadata?.property_type || "Hotel",
+          pms: data.pms || "cloudbeds",
+          businessAddress: hotelAddr,
+          mobileNumber: data.mobile_number || user?.user_metadata?.mobile_number || ""
+        });
+        
+        if (hotelObj) {
+          setHotelData({ ...hotelObj, name: hotelName, address: hotelAddr });
+          const isDoneLocal = 
+            localStorage.getItem(`ever_setup_complete_${hotelObj.id}`) === "true" ||
+            (user?.id && localStorage.getItem(`ever_setup_complete_${user.id}`) === "true") ||
+            localStorage.getItem("ever_setup_complete_default") === "true";
+
+          if (hotelObj.setup_complete === false && !isDoneLocal) {
+            setIsSetupWizardOpen(true);
+          }
+        } else if (user?.user_metadata?.business_name) {
+          setHotelData({ name: user.user_metadata.business_name, address: user.user_metadata.address });
         }
-      } catch (err) {
-        console.error("Error loading profile:", err);
       }
+    } catch (err) {
+      console.error("Error loading profile:", err);
     }
+  }, [user]);
+
+  useEffect(() => {
     loadProfile();
-  }, [user?.id]);
+  }, [loadProfile]);
 
   const handleSaveProfileModal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,7 +254,7 @@ export function Console() {
     setIsProfileModalOpen(false);
   };
 
-  const handleSavePropertyModal = (e: React.FormEvent) => {
+  const handleSavePropertyModal = async (e: React.FormEvent) => {
     e.preventDefault();
     const updated = {
       ...propertyProfile,
@@ -243,22 +265,52 @@ export function Console() {
       mobileNumber: tempProperty.mobileNumber
     };
     setPropertyProfile(updated);
-    localStorage.setItem("ever_signup_form", JSON.stringify(updated));
+
+    // Persist to Supabase
+    try {
+      if (hotelId) {
+        await supabase.from("hotels").update({ name: tempProperty.propertyName }).eq("id", hotelId);
+      }
+      if (user?.id) {
+        await supabase.from("users").update({
+          property_type: tempProperty.propertyType,
+          pms: tempProperty.pms,
+          business_address: tempProperty.businessAddress,
+          mobile_number: tempProperty.mobileNumber,
+        }).eq("id", user.id);
+      }
+      showToast("Property settings saved!", "success");
+    } catch (err: any) {
+      showToast(err.message || "Failed to save property settings", "error");
+    }
+
     setIsPropertyModalOpen(false);
   };
 
-  const handleSavePasswordModal = (e: React.FormEvent) => {
+  const handleSavePasswordModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      alert("New passwords do not match!");
+      showToast("New passwords do not match!", "error");
       return;
     }
-    setPasswordSuccess(true);
-    setTimeout(() => {
-      setIsPasswordModalOpen(false);
-      setPasswordSuccess(false);
-      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    }, 1500);
+    
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwordForm.newPassword
+      });
+      
+      if (error) throw error;
+      
+      showToast("Password updated successfully!", "success");
+      setPasswordSuccess(true);
+      setTimeout(() => {
+        setIsPasswordModalOpen(false);
+        setPasswordSuccess(false);
+        setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      }, 1500);
+    } catch (err: any) {
+      showToast(err.message || "Failed to update password", "error");
+    }
   };
 
   return (
@@ -610,6 +662,20 @@ export function Console() {
                       >
                         <Lock className="w-4 h-4 text-dash-text-sec" /> Change Password
                       </button>
+                      {(!hotelData?.setup_complete && 
+                        localStorage.getItem(`ever_setup_complete_${hotelData?.id}`) !== "true" &&
+                        (!user?.id || localStorage.getItem(`ever_setup_complete_${user.id}`) !== "true") &&
+                        localStorage.getItem("ever_setup_complete_default") !== "true") && (
+                        <button 
+                          onClick={() => {
+                            setIsSetupWizardOpen(true);
+                            setIsProfileOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-1.5 text-xs text-[#EA6639] hover:bg-[#EA6639]/5 flex items-center gap-2 font-medium"
+                        >
+                          <Sparkles className="w-4 h-4 text-[#EA6639]" /> First-Time Setup Wizard
+                        </button>
+                      )}
                     </div>
                     <div className="border-t border-dash-border-hairline py-1">
                       <button 
@@ -632,8 +698,8 @@ export function Console() {
         {/* Tab Content Area */}
         <div className="flex-1 overflow-y-auto relative min-h-0 bg-dash-canvas/50">
           {activeTab === "dashboard" && <DashboardTab onNavigate={handleNavigate as any} />}
-          {activeTab === "inbox" && <InboxTab initialSessionId={inboxTargetId} />}
-          {activeTab === "crm" && <CRMTab />}
+          {activeTab === "inbox" && <InboxTab initialSessionId={inboxTargetId} onNavigate={handleNavigate as any} />}
+          {activeTab === "crm" && <CRMTab onNavigate={handleNavigate as any} propertyName={propertyProfile.propertyName} role={propertyProfile.role} />}
           {activeTab === "knowledge_base" && <KnowledgeBaseTab role={propertyProfile.role} />}
           {activeTab === "agent_settings" && <AgentSettingsTab role={propertyProfile.role} />}
           {activeTab === "channels" && <ChannelsTab role={propertyProfile.role} />}
@@ -739,6 +805,58 @@ export function Console() {
           </div>
         </div>
       )}
+
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-dash-surface/40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-dash-surface w-full max-w-md rounded-lg shadow-xl border border-dash-border overflow-hidden">
+            <div className="px-6 py-4 border-b border-dash-border-hairline flex items-center justify-between">
+              <h3 className="font-semibold text-dash-text">Change Password</h3>
+              <button onClick={() => setIsPasswordModalOpen(false)} className="text-dash-text-muted hover:text-dash-text-sec transition-colors">&times;</button>
+            </div>
+            {passwordSuccess ? (
+              <div className="p-6 flex flex-col items-center justify-center text-center space-y-3">
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mb-2">
+                  <Check className="w-6 h-6" />
+                </div>
+                <h4 className="font-bold text-dash-text text-lg">Password Updated!</h4>
+                <p className="text-sm text-dash-text-sec">Your password has been successfully changed.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSavePasswordModal} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-dash-text mb-1">Current Password</label>
+                  <input required type="password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})} className="w-full px-3 py-1.5 bg-dash-surface border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-dash-text mb-1">New Password</label>
+                  <input required type="password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})} className="w-full px-3 py-1.5 bg-dash-surface border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-dash-text mb-1">Confirm New Password</label>
+                  <input required type="password" value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})} className="w-full px-3 py-1.5 bg-dash-surface border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text" />
+                </div>
+                <div className="pt-2 flex justify-end gap-2 border-t border-dash-border-hairline mt-4 pt-4">
+                  <button type="button" onClick={() => setIsPasswordModalOpen(false)} className="px-4 py-1.5 text-xs font-medium text-dash-text-sec hover:text-dash-text transition-colors">Cancel</button>
+                  <button type="submit" className="px-4 py-1.5 bg-[#EA6639] text-white rounded-md text-xs font-medium hover:bg-[#EA6639]/90 transition-colors">Update Password</button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Dedicated 4-Step First-Time Setup Wizard */}
+      <SetupWizardModal
+        isOpen={isSetupWizardOpen}
+        onClose={() => setIsSetupWizardOpen(false)}
+        hotelData={hotelData}
+        onComplete={() => {
+          setHotelData(prev => prev ? { ...prev, setup_complete: true } : prev);
+          setIsSetupWizardOpen(false);
+          loadProfile();
+          showToast("Property onboarding complete! Your AI agent is ready.", "success");
+        }}
+      />
     </div>
   );
 }

@@ -51,6 +51,7 @@ export function SignUpPage() {
     setError(null);
     
     try {
+      // Step 1: Create the auth user
       const { data, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -64,17 +65,45 @@ export function SignUpPage() {
             business_role: form.role,
             address: form.address,
             property_type: form.propertyType,
-            role: "hotel_manager" // Default role for new self-serve signups
+            role: "hotel_manager"
           }
         }
       });
 
       if (error) throw error;
+      if (!data.user) throw new Error("User creation failed, please try again.");
+
+      // Step 2: Create a hotel for this user using service role via RPC
+      // We generate a slug from the business name
+      const slug = form.businessName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .substring(0, 60);
+
+      const { data: hotelData, error: hotelError } = await supabase
+        .from("hotels")
+        .insert({ name: form.businessName, slug: `${slug}-${data.user.id.substring(0, 8)}` })
+        .select("id")
+        .single();
+
+      if (hotelError) {
+        console.error("Hotel creation error:", hotelError);
+        // Don't block signup — user can still be assigned hotel later by admin
+      }
+
+      // Step 3: Upsert into public.users with hotel_id
+      if (hotelData?.id) {
+        await supabase.from("users").upsert({
+          id: data.user.id,
+          email: form.email,
+          hotel_id: hotelData.id,
+          role: "hotel_manager",
+        }, { onConflict: "id" });
+      }
 
       setSuccess(true);
       setTimeout(() => {
-        // If email confirmation is off, they might be logged in already.
-        // Directing to login is safest.
         navigate("/login");
       }, 2000);
       

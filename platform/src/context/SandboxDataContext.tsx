@@ -31,7 +31,7 @@ export interface SandboxConversation {
 export interface SandboxMessage {
   id: string; session_id: string; client_id: string;
   hotel_slug: string | null; channel: string;
-  role: "user" | "assistant" | "agent"; content: string; created_at: string;
+  role: "user" | "assistant" | "agent" | "system"; content: string; created_at: string;
 }
 
 export interface SandboxFAQ {
@@ -90,6 +90,36 @@ export interface SandboxInvoice {
   id: string; date: string; period: string; amount: number; status: "Paid" | "Pending";
 }
 
+export interface SandboxTemplateItem {
+  id: string;
+  name: string;
+  language: string;
+  category: string;
+  status: "APPROVED" | "PENDING" | "REJECTED";
+  body: string;
+}
+
+export interface SandboxAgentSettings {
+  agentName: string;
+  agentTone: "Formal" | "Friendly" | "Playful" | "Conversational";
+  languagePriority: string;
+  welcomeMessage: string;
+  privacyNoticeUrl: string;
+  bookingUrl: string;
+  whatsappNumber: string;
+  humanOnlyMode: boolean;
+  startTime: string;
+  endTime: string;
+  outOfHoursMessage: string;
+  handoffTriggers: string[];
+  handoffAlertMethod: "email" | "whatsapp" | "both";
+  repEmail: string;
+  secondaryAlertEmail: string;
+  consentCaptureMode: boolean;
+  leadQualityThreshold: number;
+  templates: SandboxTemplateItem[];
+}
+
 export interface SandboxData {
   leads: SandboxLead[];
   bookings: SandboxBooking[];
@@ -107,6 +137,7 @@ export interface SandboxData {
   subProcessors: SandboxSubProcessor[];
   dsrRequests: SandboxDsrRequest[];
   invoices: SandboxInvoice[];
+  agentSettings?: SandboxAgentSettings;
 }
 
 interface SandboxContextType {
@@ -479,10 +510,37 @@ function generateSandboxData(hotelId: string): SandboxData {
     { id: "INV-2026-006", date: "Jun 1, 2026", period: "May 1 - May 31", amount: 589.00, status: "Paid" },
   ];
 
+  // ── 14. Agent Settings ───────────────────────────────────────────────────
+  const agentSettings: SandboxAgentSettings = {
+    agentName: "Ever AI Concierge",
+    agentTone: "Friendly",
+    languagePriority: "Auto-detect",
+    welcomeMessage: "Welcome to our property! I'm your digital concierge. How can I assist your stay today?",
+    privacyNoticeUrl: "https://ever.ai/privacy",
+    bookingUrl: "https://thegrandhorizon.com/book",
+    whatsappNumber: "+1 (555) 382-9102",
+    humanOnlyMode: false,
+    startTime: "00:00",
+    endTime: "23:59",
+    outOfHoursMessage: "Our digital concierge is currently offline. For urgent assistance, please contact the front desk directly.",
+    handoffTriggers: ["complaint", "manager", "refund", "emergency", "human"],
+    handoffAlertMethod: "both",
+    repEmail: "reception@thegrandhorizon.com",
+    secondaryAlertEmail: "manager@thegrandhorizon.com",
+    consentCaptureMode: true,
+    leadQualityThreshold: 3,
+    templates: [
+      { id: uid(), name: "booking_confirmation", language: "en_US", category: "UTILITY", status: "APPROVED", body: "Hello {{1}}, your booking at {{2}} has been confirmed for {{3}}." },
+      { id: uid(), name: "welcome_message", language: "en_US", category: "MARKETING", status: "APPROVED", body: "Welcome to {{1}}! I'm your digital concierge. How can I assist your stay?" },
+      { id: uid(), name: "checkout_reminder", language: "en_US", category: "UTILITY", status: "APPROVED", body: "Dear {{1}}, friendly reminder that check-out is at 11:00 AM. Would you like late check-out?" },
+      { id: uid(), name: "spa_special_offer", language: "en_US", category: "MARKETING", status: "PENDING", body: "Exclusive 20% off all spa packages today for our in-house guests. Reply to reserve." }
+    ]
+  };
+
   return {
     leads, bookings, orders, conversations, messages: messagesMap,
     faqs, rooms, upsells, analyticsData, feedback, staff, channels,
-    dpaRecord, subProcessors, dsrRequests, invoices
+    dpaRecord, subProcessors, dsrRequests, invoices, agentSettings
   };
 }
 
