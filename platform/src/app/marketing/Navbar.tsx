@@ -99,16 +99,16 @@ export function Navbar() {
                         onClick={() => setPlatformOpen(false)}
                         className="flex flex-col px-3 py-2.5 hover:bg-[#F9F6F0] rounded-xl transition-colors group"
                       >
-                        <span className="text-[13px] font-semibold text-[#111111] group-hover:text-[#EA6639] transition-colors leading-tight">Guest Concierge Engine</span>
-                        <span className="text-[11px] text-zinc-400 mt-0.5">Automate support & operations</span>
+                        <span className="text-[13px] font-semibold text-[#111111] group-hover:text-[#EA6639] transition-colors leading-tight">Guest Concierge Layer</span>
+                        <span className="text-[11px] text-zinc-400 mt-0.5">Ambient support & staff escalation</span>
                       </Link>
                       <Link
                         to="/commerce-agent"
                         onClick={() => setPlatformOpen(false)}
                         className="flex flex-col px-3 py-2.5 hover:bg-[#F9F6F0] rounded-xl transition-colors group"
                       >
-                        <span className="text-[13px] font-semibold text-[#111111] group-hover:text-[#EA6639] transition-colors leading-tight">Hospitality Commerce Agent</span>
-                        <span className="text-[11px] text-zinc-400 mt-0.5">Direct bookings & native payments</span>
+                        <span className="text-[13px] font-semibold text-[#111111] group-hover:text-[#EA6639] transition-colors leading-tight">Direct Commerce Layer</span>
+                        <span className="text-[11px] text-zinc-400 mt-0.5">Direct bookings & 10-stream upselling</span>
                       </Link>
                       <div className="h-px bg-zinc-100 mx-1" />
                       <Link
@@ -136,36 +136,28 @@ export function Navbar() {
                 <Link to="/pricing" className="text-[13px] font-medium text-zinc-800 hover:text-[#EA6639] transition-colors">
                   Pricing
                 </Link>
-
-                {/* Book Infrastructure Review */}
-                <Link
-                  to="/help-desk"
-                  className="text-[13px] font-medium text-zinc-800 hover:text-[#EA6639] transition-colors"
-                >
-                  Book Infrastructure Review
-                </Link>
               </div>
             </div>
 
-            {/* RIGHT: Currency, Console, Onboard */}
+            {/* RIGHT: Currency, Schedule Review, Console */}
             <div className="flex items-center gap-3 pr-3">
               <div className="hidden lg:block">
                 <CurrencyToggle />
               </div>
 
               <Link
-                to="/login"
-                className="hidden lg:inline-flex text-[13px] font-medium text-zinc-700 hover:text-zinc-900 transition-colors px-3 py-1.5"
+                to="/help-desk"
+                className="hidden lg:inline-flex items-center text-[13px] font-medium text-zinc-800 hover:text-[#EA6639] transition-colors px-2.5 py-1.5"
               >
-                Console
+                Schedule Infrastructure Review
               </Link>
 
-              {/* Onboard — solid black */}
+              {/* Console — solid black */}
               <Link
-                to="/signup"
+                to="/login"
                 className="hidden lg:inline-flex items-center justify-center text-[13px] font-semibold text-white bg-[#111111] hover:bg-zinc-800 rounded-full px-5 py-2 transition-colors shadow-sm"
               >
-                Onboard
+                Client Console
               </Link>
 
               {/* Mobile trigger */}
@@ -190,14 +182,14 @@ export function Navbar() {
               }
             `}
           >
-            <Link to="/guest-concierge" onClick={() => setIsOpen(false)} className="block py-3 text-[13px] font-semibold border-b border-zinc-100 text-[#111111]">Guest Concierge Engine</Link>
-            <Link to="/commerce-agent" onClick={() => setIsOpen(false)} className="block py-3 text-[13px] font-semibold border-b border-zinc-100 text-[#111111]">Hospitality Commerce Agent</Link>
+            <Link to="/guest-concierge" onClick={() => setIsOpen(false)} className="block py-3 text-[13px] font-semibold border-b border-zinc-100 text-[#111111]">Guest Concierge Layer</Link>
+            <Link to="/commerce-agent" onClick={() => setIsOpen(false)} className="block py-3 text-[13px] font-semibold border-b border-zinc-100 text-[#111111]">Direct Commerce Layer</Link>
             <Link to="/use-cases" onClick={() => setIsOpen(false)} className="block py-3 text-[13px] font-semibold border-b border-zinc-100 text-[#111111]">Use Cases</Link>
             <Link to="/demo" onClick={() => setIsOpen(false)} className="py-3 text-[13px] font-semibold border-b border-zinc-100 flex items-center gap-1.5 text-[#EA6639]">
               Interactive Demo <Sparkles className="w-3.5 h-3.5 shrink-0" />
             </Link>
             <Link to="/pricing" onClick={() => setIsOpen(false)} className="block py-3 text-[13px] font-semibold border-b border-zinc-100 text-[#111111]">Pricing</Link>
-            <Link to="/help-desk" onClick={() => setIsOpen(false)} className="block py-3 text-[13px] font-semibold border-b border-zinc-100 text-[#111111]">Book Infrastructure Review</Link>
+            <Link to="/help-desk" onClick={() => setIsOpen(false)} className="block py-3 text-[13px] font-semibold border-b border-zinc-100 text-[#EA6639]">Schedule Infrastructure Review</Link>
 
             <div className="pt-4 flex justify-between items-center pb-4 border-b border-zinc-100">
               <span className="text-xs font-medium text-zinc-900">Currency</span>
@@ -205,11 +197,8 @@ export function Navbar() {
             </div>
 
             <div className="pt-4 flex flex-col gap-3">
-              <Link to="/login" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-[13px] font-semibold border border-[#111111]/20 rounded-full hover:bg-zinc-50">
-                Console
-              </Link>
-              <Link to="/signup" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-[13px] font-semibold text-white bg-[#111111] rounded-full hover:bg-zinc-800">
-                Onboard
+              <Link to="/login" onClick={() => setIsOpen(false)} className="w-full text-center py-3 text-[13px] font-semibold text-white bg-[#111111] rounded-full hover:bg-zinc-800">
+                Client Console
               </Link>
             </div>
           </div>

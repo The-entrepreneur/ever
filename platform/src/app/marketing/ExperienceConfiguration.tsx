@@ -46,7 +46,7 @@ export function ExperienceConfiguration({
       <div className="space-y-2">
         <label className="block text-micro uppercase tracking-wider text-dash-text-muted">1. Choose Operational Layer</label>
         <div className="grid grid-cols-2 gap-3">
-          {/* GCE / Operational Layer 1 */}
+          {/* CL / Operational Layer 1 */}
           <button 
             type="button"
             onClick={() => setLevel(1)}
@@ -57,7 +57,7 @@ export function ExperienceConfiguration({
             }`}
           >
             <div className="flex justify-between items-center w-full">
-              <span className="text-micro font-mono tracking-widest font-black uppercase text-zinc-400">GCE LAYER</span>
+              <span className="text-micro font-mono tracking-widest font-black uppercase text-zinc-400">CONCIERGE LAYER</span>
               {level === 1 && <span className="w-2 h-2 rounded-md bg-[#EA6639]" />}
             </div>
             <div>
@@ -66,7 +66,7 @@ export function ExperienceConfiguration({
             </div>
           </button>
 
-          {/* HCA / Operational Layer 2 */}
+          {/* DCL / Operational Layer 2 */}
           <button 
             type="button"
             onClick={() => setLevel(2)}
@@ -77,7 +77,7 @@ export function ExperienceConfiguration({
             }`}
           >
             <div className="flex justify-between items-center w-full">
-              <span className="text-micro font-mono tracking-widest font-black uppercase text-[#EA6639]">HCA LAYER</span>
+              <span className="text-micro font-mono tracking-widest font-black uppercase text-[#EA6639]">COMMERCE LAYER</span>
               {level === 2 && <span className="w-2 h-2 rounded-md bg-[#EA6639] animate-ping" />}
             </div>
             <div>

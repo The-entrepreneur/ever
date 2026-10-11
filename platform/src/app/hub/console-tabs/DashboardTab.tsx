@@ -161,7 +161,7 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, contex
           return t >= start && t <= end;
         });
 
-        const activeDays = filteredDays.length > 0 ? filteredDays : ad.slice(-7);
+        const activeDays = filteredDays.length > 0 ? filteredDays : ad.slice(-1);
 
         let msgCount = 0;
         let handoffCount = 0;
@@ -181,20 +181,35 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, contex
         const resRate = Math.max(0, 100 - hRate);
         const avgRating = fCount > 0 ? totalFeedback / fCount : 4.8;
 
+        // Correlate leads with selected date range
+        const rangeLeads = (sandboxData.leads || []).filter(l => {
+          const t = new Date(l.created_at).getTime();
+          return t >= start && t <= end;
+        });
+        const activeLeads = rangeLeads.length > 0 ? rangeLeads : sandboxData.leads.slice(0, Math.max(2, Math.min(sandboxData.leads.length, Math.round(activeDays.length * 1.5))));
+
+        // Correlate bookings with selected date range
+        const rangeBookings = (sandboxData.bookings || []).filter(b => {
+          const t = new Date(b.created_at || b.check_in).getTime();
+          return t >= start && t <= end;
+        });
+        const activeBookingsCount = rangeBookings.length > 0 
+          ? rangeBookings.length 
+          : Math.max(1, Math.min(sandboxData.bookings.length, Math.round(activeDays.length * 0.45)));
+
         const openCount = sandboxData.conversations.filter(s => s.handoff_status === "open").length;
         const activeCount = sandboxData.conversations.filter(s => s.handoff_status === "active" || s.handoff_status === "transferred").length;
-        const bCount = sandboxData.bookings?.length || 18;
 
         setTotalMessages(msgCount);
-        setTotalLeads(sandboxData.leads.length);
+        setTotalLeads(activeLeads.length);
         setHandoffRate(hRate);
         setBotResolutionRate(resRate);
         setOpenHandoffsCount(openCount);
         setActiveStaffCount(activeCount);
         setAvgResponseMs(1450); // 1.45s avg AI response
         setFeedbackScore(Math.round(avgRating * 10) / 10);
-        setFeedbackCount(fCount || 12);
-        setTotalBookings(bCount);
+        setFeedbackCount(fCount || Math.max(2, Math.round(activeDays.length * 0.4)));
+        setTotalBookings(activeBookingsCount);
         setLastActivityAt(new Date(Date.now() - 3 * 60 * 1000)); // 3m ago
 
         // Recent handoff requests with unified status chips
@@ -214,11 +229,11 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, contex
         );
 
         // Correlated Lead Funnel
-        const enquired = sandboxData.leads.length;
-        const captured = sandboxData.leads.filter(l => l.status !== null && l.status !== "new").length;
-        const contacted = sandboxData.leads.filter(l => ["contacted", "booked"].includes(l.status ?? "")).length;
-        const booked = sandboxData.leads.filter(l => l.status === "booked").length;
-        const lost = sandboxData.leads.filter(l => l.status === "lost").length;
+        const enquired = activeLeads.length;
+        const captured = activeLeads.filter(l => l.status !== null && l.status !== "new").length;
+        const contacted = activeLeads.filter(l => ["contacted", "booked"].includes(l.status ?? "")).length;
+        const booked = activeLeads.filter(l => l.status === "booked").length;
+        const lost = activeLeads.filter(l => l.status === "lost").length;
 
         setFunnelData([
           { stage: "Enquired", count: enquired, color: "#EA6639" },
@@ -257,9 +272,16 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, contex
         ]);
 
         // Message Trend Chart across date range
-        const points = activeDays.slice(-7);
-        setMessageChart(points.map(d => ({
-          day: new Date(d.date).toLocaleDateString("en-US", { weekday: "short" }),
+        let chartPoints = activeDays;
+        if (activeDays.length > 31) {
+          const step = Math.ceil(activeDays.length / 20);
+          chartPoints = activeDays.filter((_, idx) => idx % step === 0 || idx === activeDays.length - 1);
+        }
+
+        setMessageChart(chartPoints.map(d => ({
+          day: activeDays.length <= 7
+            ? new Date(d.date).toLocaleDateString("en-US", { weekday: "short" })
+            : d.displayDate || new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
           messages: d.totalVolume,
           handoffs: d.staffVolume
         })));
@@ -330,6 +352,8 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, contex
           .from("bookings")
           .select("id", { count: "exact" })
           .eq("hotel_id", hotelId)
+          .gte("created_at", startDateIso)
+          .lte("created_at", endDateIso)
       ]);
 
       const messages = messagesRes.data ?? [];
@@ -387,10 +411,13 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, contex
         { stage: "Lost", count: lost, color: "#ef4444" }
       ]);
 
-      // Message Trend Chart
-      const days = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
+      // Message Trend Chart across selected date range
+      const startD = new Date(startDateIso);
+      const endD = new Date(endDateIso);
+      const totalSpanDays = Math.max(1, Math.min(90, Math.round((endD.getTime() - startD.getTime()) / 86400000) + 1));
+      const days = Array.from({ length: totalSpanDays }, (_, i) => {
+        const d = new Date(startD);
+        d.setDate(d.getDate() + i);
         return d.toISOString().split("T")[0];
       });
 
@@ -407,10 +434,18 @@ export function DashboardTab({ onNavigate }: { onNavigate?: (tab: string, contex
         if (hndByDay[day] !== undefined) hndByDay[day]++;
       });
 
-      setMessageChart(days.map(d => ({
-        day: new Date(d).toLocaleDateString("en-US", { weekday: "short" }),
-        messages: msgByDay[d],
-        handoffs: hndByDay[d]
+      let liveChartDays = days;
+      if (days.length > 31) {
+        const step = Math.ceil(days.length / 20);
+        liveChartDays = days.filter((_, idx) => idx % step === 0 || idx === days.length - 1);
+      }
+
+      setMessageChart(liveChartDays.map(d => ({
+        day: days.length <= 7 
+          ? new Date(d).toLocaleDateString("en-US", { weekday: "short" })
+          : new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        messages: msgByDay[d] || 0,
+        handoffs: hndByDay[d] || 0
       })));
 
       // Channel Breakdown

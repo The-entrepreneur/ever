@@ -24,8 +24,8 @@ Natively synchronizes operations, guest profiles, and room bookings across stand
 * **Analytics**: Google Analytics, Mixpanel, Hotjar
 
 ### 3. Modular Product Layer
-* **Guest Concierge Engine (GCE)**: Generative auto-answering that responds to repetitive guest queries (Wi-Fi, check-out protocols, local guides) under 5 seconds while retaining a highly tailored, warm luxury voice.
-* **Hospitality Commerce Agent (HCA)**: Drives high-margin upsells (late checkout slots, spa bookings, champagne room delivery, airport transfers) with customized checkouts.
+* **Concierge Layer (CL)**: Generative auto-answering that responds to repetitive guest queries (Wi-Fi, check-out protocols, local guides) under 5 seconds while retaining a highly tailored, warm luxury voice.
+* **Direct Commerce Layer (DCL)**: Drives high-margin upsells (late checkout slots, spa bookings, champagne room delivery, airport transfers) with customized checkouts.
 * **Global Revenue Intelligence**: Monitors team response latency, conversion funnels, custom ledger reporting, and active session details.
 
 ---

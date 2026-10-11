@@ -41,7 +41,7 @@ export function SystemHealthTab() {
                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100">
+            <tbody className="divide-y divide-dash-border-hairline">
               {[
                 { time: "2026-06-27 18:02:14", hotel: "Sunset Villas", node: "WhatsApp Trigger", severity: "Critical", msg: "Authentication failed. Token expired or revoked." },
                 { time: "2026-06-27 17:45:00", hotel: "Alpine Lodge & Spa", node: "LLM Completion", severity: "Warning", msg: "API response latency > 2000ms threshold." },
@@ -54,8 +54,8 @@ export function SystemHealthTab() {
                     <div className="text-[10px] text-dash-text-muted font-mono">{log.node}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      log.severity === 'Critical' ? 'bg-red-100 text-red-700  ' : 'bg-amber-100 text-amber-700  '
+                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                      log.severity === 'Critical' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
                     }`}>
                       {log.severity}
                     </span>

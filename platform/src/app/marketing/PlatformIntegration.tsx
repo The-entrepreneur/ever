@@ -27,7 +27,7 @@ export function PlatformIntegration({
     </>
   );
   
-  const defaultSubheading1 = "The Guest Concierge Engine delivers its greatest value when operating within Ever's Guest OS.";
+  const defaultSubheading1 = "The Concierge Layer delivers its greatest value when operating within Ever's Guest OS.";
   const defaultSubheading2 = "Instead of creating another communication platform, it connects guest engagement with commerce and hotel operations through one continuous operational model.";
   const defaultClosingQuote = "This is how Ever delivers Connected Guest Operations.";
 

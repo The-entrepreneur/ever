@@ -20,7 +20,7 @@ export function ArchitectureOverview() {
             Existing hospitality systems are built as isolated silos—chatbots don't talk to commerce, and booking tools don't coordinate with rooms. 
           </p>
           <p className="text-zinc-600 text-xs sm:text-sm font-light leading-relaxed">
-            Ever's Guest OS connects these stages into a unified, server-authoritative flow. Conversations captured by the GCE seamlessly trigger commerce opportunities in the HCA and work orders for on-property teams.
+            Ever's Guest OS connects these stages into a unified, server-authoritative flow. Conversations captured by the Concierge Layer seamlessly trigger commerce opportunities in the Direct Commerce Layer and work orders for on-property teams.
           </p>
         </div>
 
@@ -31,7 +31,7 @@ export function ArchitectureOverview() {
           
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4">
             
-            {/* Step 1: GCE Frontline */}
+            {/* Step 1: Concierge Layer Frontline */}
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -92,7 +92,7 @@ export function ArchitectureOverview() {
               </motion.div>
             </div>
 
-            {/* Step 3: HCA & Ops Execution */}
+            {/* Step 3: Direct Commerce Layer & Ops Execution */}
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}

@@ -32,19 +32,19 @@ The result is a connected operating model that improves both guest experience an
 
 # Core Operational Layers
 
-## Guest Concierge Engine (GCE)
+## Concierge Layer (CL)
 
 The operational layer responsible for guest engagement.
 
-The Guest Concierge Engine manages conversations across familiar messaging channels, answers guest enquiries, recommends services, captures intent and maintains continuous guest communication throughout the journey.
+The Concierge Layer manages conversations across familiar messaging channels, answers guest enquiries, recommends services, captures intent and maintains continuous guest communication throughout the journey.
 
 ---
 
-## Hospitality Commerce Agent (HCA)
+## Direct Commerce Layer (DCL)
 
 The commercial execution layer.
 
-The Hospitality Commerce Agent transforms guest conversations into direct commercial opportunities by coordinating bookings, secure payments, ancillary purchases and revenue-generating interactions while maintaining complete ownership of the guest relationship.
+The Direct Commerce Layer transforms guest conversations into direct commercial opportunities by coordinating bookings, secure payments, ancillary purchases and revenue-generating interactions while maintaining complete ownership of the guest relationship.
 
 ---
 

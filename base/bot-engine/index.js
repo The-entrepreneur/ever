@@ -163,7 +163,12 @@ app.post('/payment/confirm', async (req, res) => {
       session.data.guestName || 'Guest',
       (session.data.selectedRoom && session.data.selectedRoom.type) || 'Room',
       parseFloat(amount || (session.data.selectedRoom && session.data.selectedRoom.rate) || 0),
-      'confirmed'
+      'confirmed',
+      {
+        channel: session.channel || 'whatsapp',
+        checkIn: session.data?.checkin || null,
+        checkOut: session.data?.checkout || null,
+      }
     );
 
     const upsellHandler = require('./handlers/upsell');

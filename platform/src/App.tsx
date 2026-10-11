@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { ThemeProvider, useTheme } from "./shared/ThemeProvider";
 import { CurrencyProvider } from "./context/CurrencyContext";
@@ -30,8 +30,8 @@ import { Terms } from "./app/marketing/Terms";
 import { Privacy } from "./app/marketing/Privacy";
 import { HelpDesk } from "./app/marketing/HelpDesk";
 import { StatusPage } from "./app/marketing/StatusPage";
-import { SignUpPage } from "./app/auth/SignUpPage";
 import { LoginPage } from "./app/auth/LoginPage";
+import { ActivationPage } from "./app/auth/ActivationPage";
 import { SupportGuide } from "./app/marketing/SupportGuide";
 import { GuestConcierge } from "./app/marketing/GuestConcierge";
 import { CommerceAgent } from "./app/marketing/CommerceAgent";
@@ -67,6 +67,7 @@ function PageTitle() {
       "/help-desk": "Help Desk | Ever",
       "/status": "System Status | Ever",
       "/signup": "Sign Up | Ever",
+      "/activate": "Account Activation | Ever",
       "/login": "Login | Ever",
       "/console": "Console | Ever",
       "/agency": "Agency Command | Ever",
@@ -113,7 +114,7 @@ function UnfinishedPage() {
 
 function AppLayout() {
   const location = useLocation();
-  const hideNavAndFooter = ["/status", "/login", "/signup", "/support-guide", "/console", "/agency"].includes(location.pathname.replace(/\/$/, ""));
+  const hideNavAndFooter = ["/status", "/login", "/signup", "/activate", "/support-guide", "/console", "/agency"].includes(location.pathname.replace(/\/$/, ""));
   const { theme } = useTheme();
 
   // Force light mode on marketing pages
@@ -124,14 +125,17 @@ function AppLayout() {
     if (!isAppRoute) {
       root.classList.remove("dark");
       root.classList.add("light");
+      root.style.colorScheme = "light";
     } else {
       // Restore theme on app routes
       root.classList.remove("light", "dark");
       if (theme === "system") {
         const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         root.classList.add(systemTheme);
+        root.style.colorScheme = systemTheme;
       } else {
         root.classList.add(theme);
+        root.style.colorScheme = theme;
       }
     }
   }, [location.pathname, theme]);
@@ -152,7 +156,8 @@ function AppLayout() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/help-desk" element={<HelpDesk />} />
         <Route path="/status" element={<StatusPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/signup" element={<Navigate to="/help-desk" replace />} />
+        <Route path="/activate" element={<ActivationPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/console" element={
           <ProtectedRoute allowedRoles={["hotel_manager", "hotel_receptionist"]}>

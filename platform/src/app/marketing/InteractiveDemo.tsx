@@ -245,8 +245,8 @@ export function InteractiveDemo() {
     });
 
     const welcome = level === 1 
-      ? `Hello! 👋 Welcome to **${activeHotel.name}** in ${activeHotel.city}. I'm **Ellie**, your virtual Guest Concierge Agent powered by GCE.\n\nI can assist you instantly with room rates, reservation details, check-in schedules, and amenities. Let me know what you are looking to discover today!`
-      : `Hello! 👋 Welcome to **${activeHotel.name}** in ${activeHotel.city}. I'm **Ellie**, your smart Hotel Commerce Agent powered by HCA.\n\nI can check live room availability, book your stay directly inside this chat, configure luxury custom upgrades, and handle secure settlements instantly. When would you like to stay with us?`;
+      ? `Hello! 👋 Welcome to **${activeHotel.name}** in ${activeHotel.city}. I'm **Ellie**, your virtual Guest Concierge Agent powered by the Concierge Layer.\n\nI can assist you instantly with room rates, reservation details, check-in schedules, and amenities. Let me know what you are looking to discover today!`
+      : `Hello! 👋 Welcome to **${activeHotel.name}** in ${activeHotel.city}. I'm **Ellie**, your smart Hotel Commerce Agent powered by the Direct Commerce Layer.\n\nI can check live room availability, book your stay directly inside this chat, configure luxury custom upgrades, and handle secure settlements instantly. When would you like to stay with us?`;
 
     setMessages([{ role: "model", text: welcome }]);
     processedHistoryRef.current = [{ role: "model", text: welcome }];
@@ -638,10 +638,10 @@ export function InteractiveDemo() {
 
         <div className="pt-6">
           <Link 
-            to="/signup" 
+            to="/help-desk" 
             className="inline-flex items-center gap-2 bg-zinc-950 text-white hover:bg-zinc-800 transition-colors px-6 py-3 rounded-lg text-body font-semibold shadow-md"
           >
-            Start Your Free 14-Day Trial
+            Schedule Infrastructure Review
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>

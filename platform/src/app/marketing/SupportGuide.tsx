@@ -715,14 +715,14 @@ function FaqHubWidget() {
     {
       id: "fk-4",
       cat: "Core Platform",
-      q: "What is the Guest Concierge Engine (GCE)?",
-      a: "The Guest Concierge Engine (GCE) is our proprietary pipeline that automates guest inquiries, room requests, and check-in/out workflows using natural language understanding and real-time operational context."
+      q: "What is the Concierge Layer (CL)?",
+      a: "The Concierge Layer (CL) is our proprietary pipeline that automates guest inquiries, room requests, and check-in/out workflows using natural language understanding and real-time operational context."
     },
     {
       id: "fk-5",
       cat: "Core Platform",
-      q: "What is the Hospitality Commerce Agent (HCA)?",
-      a: "The Hospitality Commerce Agent (HCA) handles transactional intents. It lets guests purchase room extensions, buy visual boutique items, and pay local excursion fees natively inside WhatsApp, SMS, or Telegram."
+      q: "What is the Direct Commerce Layer (DCL)?",
+      a: "The Direct Commerce Layer (DCL) handles transactional intents. It lets guests purchase room extensions, buy visual boutique items, and pay local excursion fees natively inside WhatsApp, SMS, or Telegram."
     },
     {
       id: "fk-6",
@@ -781,8 +781,8 @@ function FaqHubWidget() {
     {
       id: "fk-15",
       cat: "Payments & Sec",
-      q: "What is the fee or commission percentage taken by Ever?",
-      a: "Ever bills on a simple flat subscription starting at $79 setup and $36/property/month with no hidden booking commissions or transaction markups on the base tier."
+      q: "What is the commercial model and performance fee structure for Ever?",
+      a: "Ever bills on a predictable infrastructure model starting from $99/month base access for properties up to 25 rooms, with a 1%–3% performance dividend applied strictly to verified direct bookings and in-chat upsells completed autonomously."
     },
     {
       id: "fk-16",

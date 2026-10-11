@@ -11,15 +11,15 @@ export function PerfectSync() {
     {
       id: 0,
       label: "1. Guest Engagement",
-      heading: "The Guest Concierge Engine.",
-      body: "The Guest Concierge Engine (GCE) acts as the engagement layer within Ever's Guest OS. It handles guest communications, guides inquiries with property details, qualifies leads, and prepares conversations for meaningful commercial outcomes across 70+ channels.",
+      heading: "The Concierge Layer.",
+      body: "The Concierge Layer acts as the engagement layer within Ever's Guest OS. It handles guest communications, guides inquiries with property details, qualifies leads, and prepares conversations for meaningful commercial outcomes across 70+ channels.",
       image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=1000"
     },
     {
       id: 1,
       label: "2. Hospitality Commerce",
-      heading: "The Hospitality Commerce Agent.",
-      body: "The Hospitality Commerce Agent (HCA) acts as the execution layer within Ever's Guest OS. It processes direct bookings, secure payments, and dynamic room upgrades. By executing within the chat, it connects routine interactions directly to commercial performance.",
+      heading: "The Direct Commerce Layer.",
+      body: "The Direct Commerce Layer acts as the execution layer within Ever's Guest OS. It processes direct bookings, secure payments, and dynamic room upgrades. By executing within the chat, it connects routine interactions directly to commercial performance.",
       image: "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&q=80&w=1000"
     },
     {

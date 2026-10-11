@@ -10,15 +10,72 @@ export interface SandboxLead {
 }
 
 export interface SandboxBooking {
-  id: string; hotel_id: string; booking_reference: string;
-  guest_name: string; room_type: string; check_in: string;
-  check_out: string; total_amount: number; status: string; created_at: string;
+  id: string; 
+  hotel_id: string; 
+  booking_reference: string;
+  booking_id?: string;
+  guest_name: string; 
+  room_type: string; 
+  check_in: string;
+  check_out: string; 
+  total_amount: number;
+  booking_value?: number;
+  fee_percentage?: number;
+  fee_amount?: number;
+  channel?: "whatsapp" | "widget" | "instagram" | "facebook";
+  status: "Confirmed" | "Pending" | "Cancelled" | "Refunded"; 
+  payment_status?: "Paid" | "Pending" | "Refunded";
+  payment_provider?: "Paystack" | "Stripe" | "Direct / On Arrival";
+  payment_ref?: string;
+  upsells_purchased?: { name: string; qty: number; price: number }[];
+  guest_email?: string;
+  guest_phone?: string;
+  cancellation_reason?: string;
+  refund_reference?: string;
+  modification_history?: { timestamp: string; note: string; actor: string }[];
+  created_at: string;
+}
+
+export interface SandboxServiceRequest {
+  id: string;
+  hotel_id: string;
+  session_id: string;
+  room_number: string;
+  service_type: string;
+  details: { notes?: string; urgency?: "normal" | "urgent" };
+  scheduled_for?: string | null;
+  status: "pending" | "preparing" | "completed";
+  channel: string;
+  guest_name?: string;
+  assigned_staff?: string;
+  staff_remarks?: StaffRemark[];
+  created_at: string;
+}
+
+export interface StaffRemark {
+  id: string;
+  author: string;
+  role?: string;
+  content: string;
+  created_at: string;
 }
 
 export interface SandboxOrder {
-  id: string; hotel_id: string; session_id: string; room_number: string;
-  items: { name: string; qty: number }[]; total_amount: number;
-  status: string; channel: string; created_at: string;
+  id: string;
+  hotel_id: string;
+  session_id: string;
+  room_number: string;
+  guest_name?: string;
+  items: { name: string; qty: number; price?: number }[];
+  total_amount: number;
+  fee_amount?: number;
+  status: string;
+  channel: string;
+  priority?: "normal" | "rush" | "vip";
+  payment_method?: string;
+  special_instructions?: string;
+  staff_remarks?: StaffRemark[];
+  created_at: string;
 }
 
 export interface SandboxConversation {
@@ -49,10 +106,14 @@ export interface SandboxUpsell {
 }
 
 export interface SandboxAnalyticsDay {
-  date: string; agentVolume: number; staffVolume: number; totalVolume: number;
+  date: string;
+  displayDate?: string;
+  agentVolume: number; staffVolume: number; totalVolume: number;
   faqIntent: number; bookingIntent: number; handoffIntent: number;
   orderIntent: number; handoffRate: number; feedbackScore: number;
   bookedCount: number; bookingValue: number;
+  /** 3% Ever agency performance fee on direct booking value */
+  feeAmount: number;
 }
 
 export interface SandboxFeedback {
@@ -66,10 +127,31 @@ export interface SandboxStaff {
 }
 
 export interface SandboxChannelAccount {
-  id: string; channel: "whatsapp" | "instagram"; display_name?: string;
-  phone_number?: string; phone_number_id?: string; waba_id?: string;
-  ig_username?: string; ig_account_id?: string;
-  status: "connected" | "disconnected"; connected_via?: string; connected_at?: string;
+  id: string;
+  channel: "whatsapp" | "instagram" | "facebook" | "widget" | "tawkto";
+  display_name?: string;
+  phone_number?: string;
+  phone_number_id?: string;
+  waba_id?: string;
+  wa_provider?: "openbsp" | "evolution" | "cloud_api";
+  verify_token?: string;
+  ig_username?: string;
+  ig_account_id?: string;
+  fb_page_id?: string;
+  fb_page_name?: string;
+  widget_color?: string;
+  widget_position?: "bottom-right" | "bottom-left";
+  widget_welcome?: string;
+  widget_show_badge?: boolean;
+  widget_avatar_url?: string;
+  tawk_property_id?: string;
+  tawk_widget_id?: string;
+  tawk_api_key?: string;
+  status: "connected" | "disconnected" | "pending" | "error";
+  connected_via?: string;
+  connected_at?: string;
+  last_tested_at?: string | null;
+  strict_validation?: boolean;
 }
 
 export interface SandboxDpaRecord {
@@ -124,6 +206,7 @@ export interface SandboxData {
   leads: SandboxLead[];
   bookings: SandboxBooking[];
   orders: SandboxOrder[];
+  serviceRequests?: SandboxServiceRequest[];
   conversations: SandboxConversation[];
   messages: Record<string, SandboxMessage[]>;
   faqs: SandboxFAQ[];
@@ -254,7 +337,7 @@ const FEEDBACK_COMMENTS_2 = [
 ];
 
 // ─── Generator ────────────────────────────────────────────────────────────────
-function generateSandboxData(hotelId: string): SandboxData {
+function generateSandboxData(hotelId: string, hotelName: string = "Dero Apartments & Resorts"): SandboxData {
   const now = new Date();
 
   // ── 1. FAQs (12) ──────────────────────────────────────────────────────────
@@ -319,7 +402,7 @@ function generateSandboxData(hotelId: string): SandboxData {
   });
 
   // ── 5. Bookings (40) ──────────────────────────────────────────────────────
-  const BOOKING_STATUSES = ["Confirmed", "Confirmed", "Confirmed", "Pending", "Cancelled"];
+  const BOOKING_STATUSES: ("Confirmed" | "Pending" | "Cancelled")[] = ["Confirmed", "Confirmed", "Confirmed", "Pending", "Cancelled"];
   const bookings: SandboxBooking[] = Array.from({ length: 40 }, (_, i) => {
     const offsetDays = rInt(-45, 60);
     const checkIn = new Date(now); checkIn.setDate(now.getDate() + offsetDays);
@@ -332,33 +415,138 @@ function generateSandboxData(hotelId: string): SandboxData {
       "Double Queen": 200, "Junior Suite": 320, "Penthouse": 650, "Accessible Room": 130,
     };
     const nightly = rateMap[roomType] ?? 200;
+    const totalAmount = nightly * nights;
+    const feePercentage = 0.0300;
+    const feeAmount = parseFloat((totalAmount * feePercentage).toFixed(2));
+    const status = sample(BOOKING_STATUSES);
+    const ref = `BK-${10000 + i * 37 + rInt(0, 99)}`;
+    const fName = sample(FIRST_NAMES);
+    const lName = sample(LAST_NAMES);
+    const channel = sample(CHANNELS) as "whatsapp" | "widget" | "instagram" | "facebook";
+
+    const hasUpsell = Math.random() > 0.4;
+    const sampleUpsell = sample(upsells);
+    const upsellsPurchased = hasUpsell ? [{ name: sampleUpsell.name, qty: 1, price: sampleUpsell.price }] : [];
+
     return {
       id: uid(),
       hotel_id: hotelId,
-      booking_reference: `BK-${10000 + i * 37 + rInt(0, 99)}`,
-      guest_name: `${sample(FIRST_NAMES)} ${sample(LAST_NAMES)}`,
+      booking_reference: ref,
+      booking_id: ref,
+      guest_name: `${fName} ${lName}`,
       room_type: roomType,
       check_in: checkIn.toISOString().split("T")[0],
       check_out: checkOut.toISOString().split("T")[0],
-      total_amount: nightly * nights,
-      status: sample(BOOKING_STATUSES),
+      total_amount: totalAmount,
+      booking_value: totalAmount,
+      fee_percentage: feePercentage,
+      fee_amount: feeAmount,
+      channel: channel,
+      status: status,
+      payment_status: status === "Confirmed" ? "Paid" : status === "Cancelled" ? "Refunded" : "Pending",
+      payment_provider: sample(["Paystack", "Stripe", "Direct / On Arrival"]) as any,
+      payment_ref: `PAY-${uid().slice(0, 8).toUpperCase()}`,
+      guest_email: `${fName.toLowerCase()}.${lName.toLowerCase()}${rInt(1, 99)}@gmail.com`,
+      guest_phone: `+1 (555) ${rInt(100, 999)}-${rInt(1000, 9999)}`,
+      upsells_purchased: upsellsPurchased,
+      cancellation_reason: status === "Cancelled" ? sample(["Guest Request", "No-Show", "Double Booking / PMS Conflict"]) : undefined,
+      refund_reference: status === "Cancelled" ? `REF-${uid().slice(0, 6).toUpperCase()}` : undefined,
+      modification_history: [
+        { timestamp: rDate(30), note: "Reservation confirmed via " + channel, actor: "AI Concierge" }
+      ],
       created_at: rDate(90),
     };
   });
 
-  // ── 6. Orders (60) ────────────────────────────────────────────────────────
+  // ── 6. Orders (60) & Service Requests (30) ────────────────────────────────
   const ORDER_STATUSES = ["Pending", "Preparing", "Completed", "Completed", "Completed"];
-  const orders: SandboxOrder[] = Array.from({ length: 60 }, () => ({
-    id: uid(),
-    hotel_id: hotelId,
-    session_id: `ORD-${uid().slice(0, 8).toUpperCase()}`,
-    room_number: `${rInt(1, 8)}0${rInt(1, 9)}`,
-    items: Array.from({ length: rInt(1, 3) }, () => ({ name: sample(ORDER_ITEMS), qty: rInt(1, 3) })),
-    total_amount: rInt(15, 180),
-    status: sample(ORDER_STATUSES),
-    channel: sample(CHANNELS),
-    created_at: rDate(7),
-  }));
+  const orders: SandboxOrder[] = Array.from({ length: 60 }, () => {
+    const fName = sample(FIRST_NAMES);
+    const lName = sample(LAST_NAMES);
+    const orderItems = Array.from({ length: rInt(1, 3) }, () => ({
+      name: sample(ORDER_ITEMS),
+      qty: rInt(1, 3),
+      price: rInt(14, 38)
+    }));
+    const totalAmt = orderItems.reduce((acc, item) => acc + (item.price || 20) * item.qty, 0);
+    const status = sample(ORDER_STATUSES);
+    const remarks: StaffRemark[] = [];
+    if (status === "Preparing" || status === "Completed") {
+      remarks.push({
+        id: uid(),
+        author: sample(["Kitchen Staff (Chef Marco)", "F&B Expeditor", "Front Desk"]),
+        role: "kitchen",
+        content: status === "Completed" ? "Order prepared, packed, and delivered to room" : "Order acknowledged by kitchen, preparation in progress",
+        created_at: rDate(1)
+      });
+    }
+    return {
+      id: uid(),
+      hotel_id: hotelId,
+      session_id: `ORD-${uid().slice(0, 8).toUpperCase()}`,
+      room_number: `${rInt(1, 8)}0${rInt(1, 9)}`,
+      guest_name: `${fName} ${lName}`,
+      items: orderItems,
+      total_amount: totalAmt,
+      fee_amount: parseFloat((totalAmt * 0.05).toFixed(2)),
+      status,
+      channel: sample(CHANNELS),
+      priority: sample(["normal", "normal", "rush", "vip"]),
+      payment_method: sample(["Room Charge (Folio)", "Card on File", "Direct on Delivery"]),
+      special_instructions: sample([
+        "Extra napkins and condiments please",
+        "Please knock twice and leave on dining tray",
+        "Dietary note: no shellfish, mild spices",
+        "Cutlery for 2 people",
+        ""
+      ]),
+      staff_remarks: remarks,
+      created_at: rDate(7),
+    };
+  });
+
+  const SERVICE_TYPES = [
+    "Extra Towels & Linens", "Housekeeping Refresh", "Luggage Assistance", 
+    "AC / Temperature Check", "Late Check-out Assistance", "Extra Pillows"
+  ];
+  const serviceRequests: SandboxServiceRequest[] = Array.from({ length: 30 }, () => {
+    const fName = sample(FIRST_NAMES);
+    const lName = sample(LAST_NAMES);
+    const status = sample(["pending", "preparing", "completed"]) as any;
+    const remarks: StaffRemark[] = [];
+    if (status !== "pending") {
+      remarks.push({
+        id: uid(),
+        author: sample(["Elena R. (Housekeeping)", "Marcus V. (Guest Services)", "Sarah L. (Concierge)"]),
+        role: "housekeeping",
+        content: status === "completed" ? "Request fulfilled and verified with guest" : "Staff dispatched to room",
+        created_at: rDate(1)
+      });
+    }
+    return {
+      id: uid(),
+      hotel_id: hotelId,
+      session_id: `SR-${uid().slice(0, 8).toUpperCase()}`,
+      room_number: `${rInt(1, 8)}0${rInt(1, 9)}`,
+      guest_name: `${fName} ${lName}`,
+      service_type: sample(SERVICE_TYPES),
+      details: {
+        notes: sample([
+          "Requested via AI digital concierge",
+          "Guest requested extra pillows and hypoallergenic linens",
+          "Guest requested luggage collection for 11:30 AM checkout",
+          "AC thermostat showing 24C, requested 20C calibration"
+        ]),
+        urgency: Math.random() > 0.7 ? "urgent" : "normal"
+      },
+      scheduled_for: new Date(now.getTime() + rInt(1, 4) * 3600000).toISOString(),
+      status,
+      channel: sample(CHANNELS),
+      assigned_staff: sample(["Elena R. (Housekeeping)", "Marcus V. (Guest Services)", "David K. (Maintenance)", "Front Desk"]),
+      staff_remarks: remarks,
+      created_at: rDate(4),
+    };
+  });
 
   // ── 7. Conversations + Messages (20 sessions) ─────────────────────────────
   const conversations: SandboxConversation[] = [];
@@ -408,6 +596,7 @@ function generateSandboxData(hotelId: string): SandboxData {
   let baseVolume = 120;
   const analyticsData: SandboxAnalyticsDay[] = Array.from({ length: 90 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (89 - i));
+    const isoDate = d.toISOString().split("T")[0];
     const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     baseVolume = Math.max(60, Math.min(400, baseVolume + rFloat(-20, 25, 1)));
     const agentVol = Math.floor(baseVolume * rFloat(0.75, 0.92, 2));
@@ -416,15 +605,17 @@ function generateSandboxData(hotelId: string): SandboxData {
     const enquired = Math.floor(baseVolume * rFloat(0.35, 0.5, 2));
     const booked = Math.floor(enquired * rFloat(0.12, 0.22, 2));
     const roomRate = rFloat(180, 350, 2);
+    const dailyBookingValue = parseFloat((booked * roomRate).toFixed(2));
+    const dailyFeeAmount = parseFloat((dailyBookingValue * 0.03).toFixed(2));
     return {
-      date: dateStr, agentVolume: agentVol, staffVolume: staffVol,
+      date: isoDate, displayDate: dateStr, agentVolume: agentVol, staffVolume: staffVol,
       totalVolume: Math.floor(baseVolume),
       faqIntent: Math.floor(baseVolume * rFloat(0.45, 0.6, 2)),
       bookingIntent: Math.floor(baseVolume * rFloat(0.25, 0.38, 2)),
       handoffIntent: staffVol,
       orderIntent: Math.floor(baseVolume * rFloat(0.08, 0.15, 2)),
       handoffRate, feedbackScore: rFloat(3.8, 5.0, 1),
-      bookedCount: booked, bookingValue: parseFloat((booked * roomRate).toFixed(2)),
+      bookedCount: booked, bookingValue: dailyBookingValue, feeAmount: dailyFeeAmount,
     };
   });
 
@@ -455,28 +646,71 @@ function generateSandboxData(hotelId: string): SandboxData {
     { id: uid(), full_name: "Sarah Jenkins", email: "sarah.j@ever.com", role: "hotel_readonly", status: "active", receive_handoff_alerts: false, last_login: rDate(5), created_at: rDate(45) },
   ];
 
-  // ── 11. Channels ──────────────────────────────────────────────────────────
+  // ── 11. Channels (All 5 channels supported per Screen 7) ───────────────────
   const channels: SandboxChannelAccount[] = [
     {
       id: uid(),
       channel: "whatsapp",
-      display_name: "The Grand Horizon Resort",
+      display_name: hotelName,
       phone_number: "+1 (555) 382-9102",
       phone_number_id: "10931893198",
       waba_id: "waba_8491024",
+      wa_provider: "openbsp",
       status: "connected",
       connected_via: "openbsp_embedded",
       connected_at: rDate(60),
+      last_tested_at: rDate(2),
+      strict_validation: false,
     },
     {
       id: uid(),
       channel: "instagram",
-      display_name: "The Grand Horizon Resort",
-      ig_username: "@grandhorizonresort",
+      display_name: hotelName,
+      ig_username: "@" + hotelName.toLowerCase().replace(/[^a-z0-9]/g, ""),
       ig_account_id: "ig_9273932014",
       status: "connected",
       connected_via: "openbsp_embedded",
       connected_at: rDate(45),
+      last_tested_at: rDate(3),
+      strict_validation: false,
+    },
+    {
+      id: uid(),
+      channel: "facebook",
+      display_name: hotelName,
+      fb_page_id: "fb_page_10948294820",
+      fb_page_name: hotelName + " Official",
+      status: "disconnected",
+      connected_via: "openbsp_embedded",
+      connected_at: undefined,
+      last_tested_at: null,
+      strict_validation: false,
+    },
+    {
+      id: uid(),
+      channel: "widget",
+      display_name: hotelName + " Web Widget",
+      status: "connected",
+      widget_color: "#EA6639",
+      widget_position: "bottom-right",
+      widget_welcome: `Welcome to ${hotelName}! I'm your digital concierge. How can I assist your stay today?`,
+      widget_show_badge: true,
+      widget_avatar_url: "",
+      connected_at: rDate(90),
+      last_tested_at: rDate(1),
+      strict_validation: true,
+    },
+    {
+      id: uid(),
+      channel: "tawkto",
+      display_name: hotelName + " Live Chat",
+      status: "disconnected",
+      tawk_property_id: "65b92f9a8d261e1b5f59c112",
+      tawk_widget_id: "1hk28e932",
+      tawk_api_key: "",
+      connected_at: undefined,
+      last_tested_at: null,
+      strict_validation: false,
     }
   ];
 
@@ -538,7 +772,7 @@ function generateSandboxData(hotelId: string): SandboxData {
   };
 
   return {
-    leads, bookings, orders, conversations, messages: messagesMap,
+    leads, bookings, orders, serviceRequests, conversations, messages: messagesMap,
     faqs, rooms, upsells, analyticsData, feedback, staff, channels,
     dpaRecord, subProcessors, dsrRequests, invoices, agentSettings
   };
@@ -553,10 +787,13 @@ export const SandboxDataProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [data, setData] = useState<SandboxData | null>(null);
 
   const generate = useCallback(() => {
-    const fresh = generateSandboxData(hotelId);
+    const hotelName = user?.email?.toLowerCase() === "dero@ever.com"
+      ? "Dero Apartments & Resorts"
+      : (user?.user_metadata?.hotel_name || user?.user_metadata?.property_name || "Dero Apartments & Resorts");
+    const fresh = generateSandboxData(hotelId, hotelName);
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(fresh));
     setData(fresh);
-  }, [hotelId]);
+  }, [hotelId, user]);
 
   const updateData = useCallback((updater: (prev: SandboxData) => SandboxData) => {
     setData(prev => {

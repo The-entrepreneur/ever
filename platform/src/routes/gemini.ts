@@ -20,10 +20,39 @@ const router = Router();
         "3. NEVER output raw, unformatted pathnames or URLs like '/help-desk', '/privacy', or 'https://ever.ai/help-desk' in the text. Instead, ALWAYS format them as rich, clean Markdown hyperlinks with pure, highlighted friendly titles. For example, write '[Help Desk](/help-desk)' or '[Privacy Policy](/privacy)', never just '/help-desk'. The user must only see the clean highlighted text to click, with no pathnames or brackets visible.\n\n" +
         "Keep your answers extremely friendly, professional, structured, and informative. If they have complex issues, direct them to our [Help Desk](/help-desk).";
 
+      const extractText = (msg: any): string => {
+        if (!msg) return "";
+        if (typeof msg === "string") return msg;
+        if (typeof msg.text === "string" && msg.text.trim()) return msg.text;
+        if (Array.isArray(msg.parts) && msg.parts.length > 0) {
+          const joined = msg.parts
+            .map((p: any) => (typeof p === "string" ? p : p?.text || ""))
+            .filter(Boolean)
+            .join(" ");
+          if (joined.trim()) return joined;
+        }
+        if (typeof msg.content === "string" && msg.content.trim()) return msg.content;
+        return "";
+      };
+
       // format contents as required by @google/genai SDK
-      // history items must be objects like: { role: 'user'|'model', parts: [{ text: ... }] }
-      const contents = history || [];
-      contents.push({ role: "user", parts: [{ text: prompt }] });
+      const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
+
+      for (const msg of history || []) {
+        const text = extractText(msg).trim();
+        if (text) {
+          contents.push({
+            role: msg.role === "model" ? "model" : "user",
+            parts: [{ text }],
+          });
+        }
+      }
+
+      const promptText = (typeof prompt === "string" ? prompt : extractText(prompt)).trim();
+      contents.push({
+        role: "user",
+        parts: [{ text: promptText || "Hello" }],
+      });
 
       let response = null;
       let lastError = null;
@@ -143,14 +172,14 @@ const router = Router();
           `- CRITICAL GRAMMAR AND STYLE RULE: You are STRICTLY FORBIDDEN from using em-dashes (—) or double hyphens (--) under any circumstances in your write-ups and conversations. Replace any em-dashes with commas, colons, parentheses, or simple periods. Your write-ups must read completely naturally, fluidly, and be highly converting.`;
       } else if (activeLevel === 1) {
         systemInstruction =
-          `You are Ellie, the virtual Guest Concierge Engine (GCE) for "${h.name}" located in ${h.city}.\n\n` +
+          `You are Ellie, the virtual Concierge Layer (CL) for "${h.name}" located in ${h.city}.\n\n` +
           `YOUR ROLE AND LIMITS:\n` +
           `- You are a helpful, warm, and professional hotel assistant.\n` +
           `- You can answer FAQs about check-in/out times, address (${h.address}), pool/gym hours, WiFi, parking, breakfast times, and basic amenities. All of this is detailed in the property profile below.\n` +
           `- You can present room types and starting rates.\n` +
-          `- IMPORTANT LIMITATION: You operate as the Guest Concierge Engine (GCE). You DO NOT have access to live room availability calendars, you CANNOT make direct bookings inside the chat, you CANNOT handle direct payments, and you cannot customize/sell reservation upgrades.\n` +
+          `- IMPORTANT LIMITATION: You operate as the Concierge Layer (CL). You DO NOT have access to live room availability calendars, you CANNOT make direct bookings inside the chat, you CANNOT handle direct payments, and you cannot customize/sell reservation upgrades.\n` +
           `- If the user asks to book a room, check live availability, make a reservation, add an upgrade, or make a payment, you must politely state:\n` +
-          `  "Direct booking, live availability calendars, and smart in-chat payment checkout are premium features of Ever's Hospitality Commerce Agent (HCA). As a GCE virtual assistant, I can collect your desired dates and redirect you to our external reservation portal or WhatsApp line to complete your stay."\n` +
+          `  "Direct booking, live availability calendars, and smart in-chat payment checkout are premium features of Ever's Direct Commerce Layer (DCL). As a Concierge Layer virtual assistant, I can collect your desired dates and redirect you to our external reservation portal or WhatsApp line to complete your stay."\n` +
           `- Then, collect their desired check-in/out dates and show them a link to book: '[Book Now Online](https://ever.ai/demo/book)' or '[Chat on WhatsApp](https://ever.ai/demo/whatsapp)'.\n\n` +
           `PROPERTY PROFILE:\n` +
           `- Hotel Name: ${h.name}\n` +
@@ -165,7 +194,7 @@ const router = Router();
           `- CRITICAL GRAMMAR AND STYLE RULE: You are STRICTLY FORBIDDEN from using em-dashes (—) or double hyphens (--) under any circumstances in your write-ups and conversations. Replace any em-dashes with commas, colons, parentheses, or simple periods. Your write-ups must read completely naturally, fluidly, and be highly converting.`;
       } else {
         systemInstruction =
-          `You are Ellie, the virtual Hospitality Commerce Agent (HCA) for "${h.name}" in ${h.city}.\n\n` +
+          `You are Ellie, the virtual Direct Commerce Layer (DCL) for "${h.name}" in ${h.city}.\n\n` +
           `YOUR ROLE AND SUPERPOWERS:\n` +
           `- You have full Guest Support Concierge automation plus Conversational Direct Booking and revenue upselling superpowers!\n` +
           `- You can handle guest FAQs about check-in/out times, address (${h.address}), pool/gym hours, WiFi, parking, breakfast times, and basic amenities.\n` +
@@ -190,9 +219,39 @@ const router = Router();
           `- CRITICAL GRAMMAR AND STYLE RULE: You are STRICTLY FORBIDDEN from using em-dashes (—) or double hyphens (--) under any circumstances in your write-ups and conversations. Replace any em-dashes with commas, colons, parentheses, or simple periods. Your write-ups must read completely naturally, fluidly, and be highly converting.`;
       }
 
+      const extractText = (msg: any): string => {
+        if (!msg) return "";
+        if (typeof msg === "string") return msg;
+        if (typeof msg.text === "string" && msg.text.trim()) return msg.text;
+        if (Array.isArray(msg.parts) && msg.parts.length > 0) {
+          const joined = msg.parts
+            .map((p: any) => (typeof p === "string" ? p : p?.text || ""))
+            .filter(Boolean)
+            .join(" ");
+          if (joined.trim()) return joined;
+        }
+        if (typeof msg.content === "string" && msg.content.trim()) return msg.content;
+        return "";
+      };
+
       // format contents as required by @google/genai SDK
-      const contents = history || [];
-      contents.push({ role: "user", parts: [{ text: prompt }] });
+      const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
+
+      for (const msg of history || []) {
+        const text = extractText(msg).trim();
+        if (text) {
+          contents.push({
+            role: msg.role === "model" ? "model" : "user",
+            parts: [{ text }],
+          });
+        }
+      }
+
+      const promptText = (typeof prompt === "string" ? prompt : extractText(prompt)).trim();
+      contents.push({
+        role: "user",
+        parts: [{ text: promptText || "Hello" }],
+      });
 
       let response = null;
       let lastError = null;

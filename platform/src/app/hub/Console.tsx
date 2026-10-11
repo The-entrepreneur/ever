@@ -8,7 +8,6 @@ import {
   Settings, 
   Blocks,
   UserCheck,
-  Search,
   HelpCircle,
   Sun,
   Moon,
@@ -583,12 +582,6 @@ export function Console() {
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4 text-xs shrink-0">
-            <div className="hidden sm:flex items-center gap-2 bg-dash-canvas border border-dash-border hover:border-dash-border rounded px-2.5 py-1 cursor-pointer transition-colors">
-              <Search className="w-3.5 h-3.5 text-dash-text-sec" />
-              <span className="text-dash-text-sec text-xs mr-2">Search...</span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] bg-dash-surface-raised text-dash-text-sec border border-dash-border">Ctrl K</span>
-            </div>
-
             <div className="flex items-center gap-1.5 ml-1">
               <Link to="/help-desk" className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-dash-surface-hover text-dash-text-sec hover:text-dash-text transition-colors" title="Get Help">
                 <HelpCircle className="w-4 h-4" />
@@ -616,7 +609,7 @@ export function Console() {
                 </button>
                 
                 {isProfileOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-dash-surface border border-dash-border overflow-hidden z-50">
+                  <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 bg-dash-surface border border-dash-border overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
                     <div className="px-4 py-3 border-b border-dash-border-hairline bg-dash-surface">
                       <p className="text-xs font-semibold text-dash-text truncate">{propertyProfile.fullName}</p>
                       <p className="text-xs text-dash-text-sec truncate">{propertyProfile.email}</p>
@@ -632,7 +625,7 @@ export function Console() {
                           setIsProfileModalOpen(true);
                           setIsProfileOpen(false);
                         }}
-                        className="w-full text-left px-4 py-1.5 text-xs text-dash-text hover:bg-dash-surface-hover flex items-center gap-2"
+                        className="w-full text-left px-4 py-1.5 text-xs text-dash-text hover:bg-dash-surface-hover flex items-center gap-2 transition-colors"
                       >
                         <User className="w-4 h-4 text-dash-text-sec" /> Profile
                       </button>
@@ -648,7 +641,7 @@ export function Console() {
                           setIsPropertyModalOpen(true);
                           setIsProfileOpen(false);
                         }}
-                        className="w-full text-left px-4 py-1.5 text-xs text-dash-text hover:bg-dash-surface-hover flex items-center gap-2"
+                        className="w-full text-left px-4 py-1.5 text-xs text-dash-text hover:bg-dash-surface-hover flex items-center gap-2 transition-colors"
                       >
                         <Building className="w-4 h-4 text-dash-text-sec" /> Property Settings
                       </button>
@@ -658,7 +651,7 @@ export function Console() {
                           setIsPasswordModalOpen(true);
                           setIsProfileOpen(false);
                         }}
-                        className="w-full text-left px-4 py-1.5 text-xs text-dash-text hover:bg-dash-surface-hover flex items-center gap-2"
+                        className="w-full text-left px-4 py-1.5 text-xs text-dash-text hover:bg-dash-surface-hover flex items-center gap-2 transition-colors"
                       >
                         <Lock className="w-4 h-4 text-dash-text-sec" /> Change Password
                       </button>
@@ -671,7 +664,7 @@ export function Console() {
                             setIsSetupWizardOpen(true);
                             setIsProfileOpen(false);
                           }}
-                          className="w-full text-left px-4 py-1.5 text-xs text-[#EA6639] hover:bg-[#EA6639]/5 flex items-center gap-2 font-medium"
+                          className="w-full text-left px-4 py-1.5 text-xs text-[#EA6639] hover:bg-[#EA6639]/10 flex items-center gap-2 font-medium transition-colors"
                         >
                           <Sparkles className="w-4 h-4 text-[#EA6639]" /> First-Time Setup Wizard
                         </button>
@@ -683,7 +676,7 @@ export function Console() {
                           setIsProfileOpen(false);
                           navigate("/login");
                         }}
-                        className="w-full text-left px-4 py-1.5 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        className="w-full text-left px-4 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
                       >
                         <LogOut className="w-4 h-4" /> Log out
                       </button>
@@ -704,8 +697,14 @@ export function Console() {
           {activeTab === "agent_settings" && <AgentSettingsTab role={propertyProfile.role} />}
           {activeTab === "channels" && <ChannelsTab role={propertyProfile.role} />}
           {activeTab === "staff" && <StaffTab role={propertyProfile.role} />}
-          {activeTab === "bookings" && <BookingsTab />}
-          {activeTab === "analytics" && <AnalyticsTab />}
+          {activeTab === "bookings" && (
+            <BookingsTab 
+              role={propertyProfile.role} 
+              propertyName={propertyProfile.propertyName} 
+              onNavigate={handleNavigate as any} 
+            />
+          )}
+          {activeTab === "analytics" && <AnalyticsTab onNavigate={handleNavigate as any} />}
           {activeTab === "feedback" && <FeedbackTab />}
           {activeTab === "compliance" && <ComplianceTab />}
           {activeTab === "billing" && <BillingTab />}
@@ -723,15 +722,15 @@ export function Console() {
             <form onSubmit={handleSaveProfileModal} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-dash-text mb-1">Full Name</label>
-                <input required type="text" value={tempProfile.fullName} onChange={(e) => setTempProfile({...tempProfile, fullName: e.target.value})} className="w-full px-3 py-1.5 bg-dash-surface border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text" />
+                <input required type="text" value={tempProfile.fullName} onChange={(e) => setTempProfile({...tempProfile, fullName: e.target.value})} className="w-full px-3 py-1.5 bg-dash-canvas border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-dash-text mb-1">Email Address</label>
-                <input required type="email" value={tempProfile.email} onChange={(e) => setTempProfile({...tempProfile, email: e.target.value})} className="w-full px-3 py-1.5 bg-dash-surface border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text" />
+                <input required type="email" value={tempProfile.email} onChange={(e) => setTempProfile({...tempProfile, email: e.target.value})} className="w-full px-3 py-1.5 bg-dash-canvas border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-dash-text mb-1">Role</label>
-                <select value={tempProfile.role} onChange={(e) => setTempProfile({...tempProfile, role: e.target.value})} className="w-full px-3 py-1.5 bg-dash-surface border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text">
+                <select value={tempProfile.role} onChange={(e) => setTempProfile({...tempProfile, role: e.target.value})} className="w-full px-3 py-1.5 bg-dash-canvas border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text">
                   <option value="hotel_manager">Hotel Manager</option>
                   <option value="hotel_receptionist">Hotel Receptionist</option>
                   <option value="hotel_readonly">Hotel Read-Only</option>
@@ -739,7 +738,7 @@ export function Console() {
               </div>
               <div className="pt-2 flex justify-end gap-2">
                 <button type="button" onClick={() => setIsProfileModalOpen(false)} className="px-4 py-1.5 text-xs font-medium text-dash-text-sec hover:text-dash-text transition-colors">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-dash-surface text-dash-text rounded-md text-xs font-medium hover:bg-dash-surface-raised transition-colors">Save Changes</button>
+                <button type="submit" className="px-4 py-1.5 bg-[#EA6639] text-white rounded-md text-xs font-semibold hover:bg-[#EA6639]/90 transition-colors shadow-xs">Save Changes</button>
               </div>
             </form>
           </div>
@@ -756,12 +755,12 @@ export function Console() {
             <form onSubmit={handleSavePropertyModal} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-dash-text mb-1">Property Name</label>
-                <input required type="text" value={tempProperty.propertyName} onChange={(e) => setTempProperty({...tempProperty, propertyName: e.target.value})} className="w-full px-3 py-1.5 bg-dash-surface border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text" />
+                <input required type="text" value={tempProperty.propertyName} onChange={(e) => setTempProperty({...tempProperty, propertyName: e.target.value})} className="w-full px-3 py-1.5 bg-dash-canvas border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-dash-text mb-1">Property Type</label>
-                  <select value={tempProperty.propertyType} onChange={(e) => setTempProperty({...tempProperty, propertyType: e.target.value})} className="w-full px-3 py-1.5 bg-dash-surface border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text">
+                  <select value={tempProperty.propertyType} onChange={(e) => setTempProperty({...tempProperty, propertyType: e.target.value})} className="w-full px-3 py-1.5 bg-dash-canvas border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text">
                     <option value="Hotel">Hotel</option>
                     <option value="Resort">Resort</option>
                     <option value="Aparthotel">Aparthotel</option>
@@ -770,7 +769,7 @@ export function Console() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-dash-text mb-1">Primary PMS</label>
-                  <select value={tempProperty.pms} onChange={(e) => setTempProperty({...tempProperty, pms: e.target.value})} className="w-full px-3 py-1.5 bg-dash-surface border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text">
+                  <select value={tempProperty.pms} onChange={(e) => setTempProperty({...tempProperty, pms: e.target.value})} className="w-full px-3 py-1.5 bg-dash-canvas border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#EA6639] text-dash-text">
                     <option value="cloudbeds">Cloudbeds</option>
                     <option value="mews">Mews</option>
                     <option value="opera">Opera (Oracle)</option>
@@ -798,7 +797,7 @@ export function Console() {
                 )}
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setIsPropertyModalOpen(false)} className="px-4 py-1.5 text-xs font-medium text-dash-text-sec hover:text-dash-text transition-colors">Cancel</button>
-                  <button type="submit" className="px-4 py-1.5 bg-dash-surface text-dash-text rounded-md text-xs font-medium hover:bg-dash-surface-raised transition-colors">Save Settings</button>
+                  <button type="submit" className="px-4 py-1.5 bg-[#EA6639] text-white rounded-md text-xs font-semibold hover:bg-[#EA6639]/90 transition-colors shadow-xs">Save Settings</button>
                 </div>
               </div>
             </form>

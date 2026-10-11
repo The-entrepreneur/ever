@@ -19,9 +19,12 @@ class HandoffHandler {
       await setHandoffActive(session_id, 'true', 24);
 
       if (channel === 'whatsapp' && wa_id) {
-        // Cloud API - we use the handoff lock.
-        // Evolution API - call adapter.pauseSession if needed (adapter logic can be called here)
-        // For simplicity, the Redis lock covers the bot engine side.
+        try {
+          const wa = require('../adapters/whatsapp-adapter');
+          await wa.pauseSession(wa_id);
+        } catch (e) {
+          console.warn('[Handoff] WhatsApp pauseSession error:', e.message);
+        }
       } 
       else if (channel === 'tawkto' && tawkto_chat_id) {
         // Example: Tawk.to REST API to assign agent (requires proper Tawk.to setup/tokens)
@@ -46,11 +49,19 @@ class HandoffHandler {
   }
 
   async resolveHandoff(req, res) {
-    const { session_id } = req.body;
+    const { session_id, channel, wa_id } = req.body;
     if (!session_id) return res.status(400).json({ error: 'session_id required' });
 
     try {
       await clearHandoff(session_id);
+      if (channel === 'whatsapp' && wa_id) {
+        try {
+          const wa = require('../adapters/whatsapp-adapter');
+          await wa.resumeSession(wa_id);
+        } catch (e) {
+          console.warn('[Handoff] WhatsApp resumeSession error:', e.message);
+        }
+      }
       return res.json({ success: true, message: 'Handoff resolved, bot resumed' });
     } catch (err) {
       console.error('[Handoff] Error resolving handoff:', err);

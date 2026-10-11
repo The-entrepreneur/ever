@@ -636,17 +636,11 @@ export function About() {
           
           <div className="mt-8 flex flex-col sm:flex-row gap-4 items-center">
             <InteractiveButton
-              to="/signup"
+              to="/help-desk"
               className="text-white bg-[#EA6639] border-none"
             >
-              Explore the Platform
+              Schedule Infrastructure Review
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </InteractiveButton>
-            <InteractiveButton
-              to="/help-desk"
-              className="bg-white !text-zinc-700 hover:bg-zinc-50 border border-zinc-200"
-            >
-              Talk with Our Team
             </InteractiveButton>
           </div>
         </div>

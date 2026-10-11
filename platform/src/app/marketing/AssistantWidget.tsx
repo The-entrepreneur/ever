@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, X, Send, Bot, Loader2, Calendar, Sparkles } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import Markdown from 'react-markdown';
-import { BookingModal } from './BookingModal';
+
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -20,16 +20,10 @@ export function AssistantWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Proactive delayed popup states
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [popupInput, setPopupInput] = useState('');
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-
   // Auto-close on route change to console/agency
   useEffect(() => {
     if (isLoggedInRoute) {
       setIsOpen(false);
-      setIsPopupOpen(false);
     }
   }, [location.pathname, isLoggedInRoute]);
 
@@ -37,36 +31,14 @@ export function AssistantWidget() {
   useEffect(() => {
     const handleOpenChat = () => {
       setIsOpen(true);
-      setIsPopupOpen(false);
     };
     window.addEventListener('open-ellie-chat', handleOpenChat);
     return () => window.removeEventListener('open-ellie-chat', handleOpenChat);
   }, []);
 
   const toggleOpen = () => {
-    setIsOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        setIsPopupOpen(false); // Close proactive bubble if chat opens
-      }
-      return next;
-    });
+    setIsOpen((prev) => !prev);
   };
-
-  // 10-second delayed pop-up trigger
-  useEffect(() => {
-    if (isLoggedInRoute) return;
-    const isDismissed = localStorage.getItem("ever_chat_popup_dismissed") === "true";
-    if (isDismissed) return;
-
-    const timer = setTimeout(() => {
-      if (!isOpen) {
-        setIsPopupOpen(true);
-      }
-    }, 10000); // Trigger after 10 seconds
-
-    return () => clearTimeout(timer);
-  }, [isOpen, isLoggedInRoute]);
 
   // Handle auto scroll inside chat window
   useEffect(() => {
@@ -113,6 +85,7 @@ export function AssistantWidget() {
     try {
       const history = historyContext.map(msg => ({
         role: msg.role,
+        text: msg.text,
         parts: [{ text: msg.text }]
       }));
 
@@ -153,131 +126,13 @@ export function AssistantWidget() {
     await submitChatMessage(userMessage, newMessages.slice(0, -1));
   };
 
-  const handlePopupSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!popupInput.trim()) return;
-
-    const queryText = popupInput.trim();
-    setPopupInput('');
-    setIsPopupOpen(false);
-    setIsOpen(true);
-
-    const historyAtTrigger = [...messages];
-    // If messages list is empty, initialize with welcome and user query
-    let newHistory: ChatMessage[] = [];
-    if (messages.length === 0) {
-      newHistory = [
-        {
-          role: 'model',
-          text: 'Hello! I am Ellie, your Virtual Partner here at Ever. I can guide you through our hospitality finance automation pipelines, general ledger setups, and booking channel synchronization. Let me know what you are looking to optimize today!',
-        },
-        { role: 'user', text: queryText }
-      ];
-      setMessages(newHistory);
-      submitChatMessage(queryText, newHistory.slice(0, -1));
-    } else {
-      newHistory = [...messages, { role: 'user', text: queryText }];
-      setMessages(newHistory);
-      submitChatMessage(queryText, historyAtTrigger);
-    }
-  };
-
-  const handleDismissPopup = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsPopupOpen(false);
-    localStorage.setItem("ever_chat_popup_dismissed", "true");
-  };
-
-  if (isLoggedInRoute && !isOpen && !isBookingModalOpen) {
+  if (isLoggedInRoute && !isOpen) {
     return null;
   }
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end" id="widget-floating-container">
-      <AnimatePresence>
-        {/* TAB 1: MODEL-BASED DELAYED PROACTIVE POPUP */}
-        {isPopupOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 15, scale: 0.93 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.93 }}
-            className="bg-white border border-zinc-200/80 rounded-3xl shadow-2xl p-6 mb-4 w-80 sm:w-85 overflow-hidden relative text-left"
-            id="proactive-chat-popup"
-          >
-            {/* Header section with closing element */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <img 
-                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150"
-                    alt="Ellie"
-                    className="w-10 h-10 rounded-full object-cover border border-zinc-200"
-                  />
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-zinc-900 flex items-center gap-1">
-                    Ellie
-                    <Sparkles className="w-3 h-3 text-[#EA6639] shrink-0" />
-                  </h4>
-                  <p className="text-[10px] text-zinc-500 font-light font-mono uppercase tracking-wider">Virtual Agent</p>
-                </div>
-              </div>
-              <button 
-                onClick={handleDismissPopup}
-                className="w-7 h-7 bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 rounded-full flex items-center justify-center transition-all cursor-pointer relative -top-1 -right-1"
-                aria-label="Dismiss message"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
 
-            {/* Bubble contents */}
-            <div className="space-y-4">
-              <p className="text-zinc-800 text-xs leading-relaxed font-light">
-                Hi there! I'm Ellie, your virtual partner. Got any questions about Ever or want to learn how it can automate your hospitality business and maximize bookings?
-              </p>
-
-              {/* Proactive Actions */}
-              <button
-                onClick={() => {
-                  setIsBookingModalOpen(true);
-                  setIsPopupOpen(false);
-                }}
-                className="w-full py-2.5 bg-[#EA6639] hover:bg-[#d65a2e] text-white text-xs font-semibold rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer hover:shadow"
-              >
-                <Calendar className="w-3.5 h-3.5 shrink-0" />
-                Book a Meeting
-              </button>
-
-              {/* Dynamic Action-bridge input */}
-              <form onSubmit={handlePopupSubmit} className="relative flex items-center pt-1 border-t border-zinc-100">
-                <input
-                  type="text"
-                  required
-                  value={popupInput}
-                  onChange={(e) => setPopupInput(e.target.value)}
-                  placeholder="Ask a question..."
-                  className="w-full bg-zinc-50 border border-zinc-200/80 hover:border-zinc-300 rounded-xl pl-4 pr-10 py-2.5 text-xs focus:ring-1 focus:ring-[#EA6639] focus:bg-white focus:outline-none transition-all placeholder-zinc-400 text-zinc-800"
-                />
-                <button
-                  type="submit"
-                  disabled={!popupInput.trim()}
-                  className="absolute right-2 text-[#EA6639] disabled:opacity-35 hover:scale-105 active:scale-95 transition-all w-7 h-7 rounded-lg flex items-center justify-center"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                </button>
-              </form>
-
-              {/* QA disclaimer */}
-              <p className="text-[10px] text-zinc-400 font-light leading-relaxed">
-                This chat may be recorded for quality assurance. You can view our{" "}
-                <Link to="/privacy" className="underline hover:text-zinc-600">privacy policy here</Link>.
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {/* TAB 2: RICH EXPERIMENT MARKDOWN CHAT PANEL */}
@@ -421,12 +276,6 @@ export function AssistantWidget() {
           {isOpen ? <X className="w-6 h-6 animate-in duration-200 rotation-45" /> : <MessageSquare className="w-6 h-6" />}
         </button>
       )}
-
-      {/* Booking Modal Integration */}
-      <BookingModal 
-        isOpen={isBookingModalOpen} 
-        onClose={() => setIsBookingModalOpen(false)} 
-      />
     </div>
   );
 }

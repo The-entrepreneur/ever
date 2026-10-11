@@ -30,51 +30,53 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
-    --dash-canvas: #FAFAFA;
+    --dash-canvas: #F8F9FA;
     --dash-sidebar: #FFFFFF;
-    --dash-sidebar-sec: #F4F5F7;
+    --dash-sidebar-sec: #F1F3F5;
     --dash-surface: #FFFFFF;
-    --dash-surface-hover: #F4F5F7;
+    --dash-surface-hover: #F1F3F5;
     --dash-surface-raised: #FFFFFF;
-    --dash-surface-inset: #F8F9FA;
+    --dash-surface-inset: #F4F5F7;
 
-    --dash-border: rgba(0,0,0,0.12);
-    --dash-border-hairline: rgba(0,0,0,0.06);
-    --dash-border-strong: rgba(0,0,0,0.20);
+    --dash-border: rgba(0,0,0,0.14);
+    --dash-border-hairline: rgba(0,0,0,0.08);
+    --dash-border-strong: rgba(0,0,0,0.24);
     --dash-border-focus: #EA6639;
 
-    --dash-text: #1C1C1E;
-    --dash-text-sec: #636369;
-    --dash-text-muted: #8E8E93;
-    --dash-text-disabled: #C7C7CC;
+    --dash-text: #111827;
+    --dash-text-sec: #4B5563;
+    --dash-text-muted: #6B7280;
+    --dash-text-disabled: #9CA3AF;
 
     --dash-green: #EA6639;
     --dash-green-hover: #d85e34;
     --dash-green-text: #FFFFFF;
   }
   .dark {
+    color-scheme: dark;
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
 
-    --dash-canvas: #0A0A0B;
-    --dash-sidebar: #0A0A0B;
-    --dash-sidebar-sec: #111113;
+    --dash-canvas: #09090B;
+    --dash-sidebar: #0E0E11;
+    --dash-sidebar-sec: #141418;
     --dash-surface: #18181B;
-    --dash-surface-hover: #1F1F23;
-    --dash-surface-raised: #1C1C1F;
-    --dash-surface-inset: #0D0D0F;
+    --dash-surface-hover: #222227;
+    --dash-surface-raised: #1F1F24;
+    --dash-surface-inset: #0F0F12;
 
-    --dash-border: rgba(255,255,255,0.10);
-    --dash-border-hairline: rgba(255,255,255,0.06);
-    --dash-border-strong: rgba(255,255,255,0.16);
+    --dash-border: rgba(255,255,255,0.12);
+    --dash-border-hairline: rgba(255,255,255,0.07);
+    --dash-border-strong: rgba(255,255,255,0.22);
     --dash-border-focus: #EA6639;
 
     --dash-text: #F4F4F5;
     --dash-text-sec: #A1A1AA;
-    --dash-text-muted: #71717A;
+    --dash-text-muted: #8E8E96;
     --dash-text-disabled: #52525B;
 
     --dash-green: #EA6639;
@@ -85,6 +87,52 @@
   body {
     background-color: var(--dash-canvas);
     color: var(--dash-text);
+  }
+
+  /* Universal Dropdown & Native Controls Theme Normalization */
+  select {
+    color-scheme: light;
+  }
+  .dark select {
+    color-scheme: dark;
+  }
+
+  select option {
+    background-color: var(--dash-surface) !important;
+    color: var(--dash-text) !important;
+  }
+
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    color-scheme: light;
+  }
+  .dark input[type="date"],
+  .dark input[type="time"],
+  .dark input[type="datetime-local"] {
+    color-scheme: dark;
+  }
+
+  /* Themed Smooth Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.18);
+    border-radius: 9999px;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.32);
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.32);
   }
 }
 

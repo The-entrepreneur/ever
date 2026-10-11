@@ -18,8 +18,9 @@ interface DateRangePickerProps {
 
 export function getDateRangeFromPreset(preset: DateRangePreset, customStart?: string, customEnd?: string): DateRangeValue {
   const now = new Date();
-  const end = new Date();
-  const start = new Date();
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+  const start = new Date(now);
 
   switch (preset) {
     case "today":
@@ -32,6 +33,7 @@ export function getDateRangeFromPreset(preset: DateRangePreset, customStart?: st
       };
     case "7d":
       start.setDate(now.getDate() - 7);
+      start.setHours(0, 0, 0, 0);
       return {
         preset: "7d",
         startDate: start.toISOString(),
@@ -40,6 +42,7 @@ export function getDateRangeFromPreset(preset: DateRangePreset, customStart?: st
       };
     case "30d":
       start.setDate(now.getDate() - 30);
+      start.setHours(0, 0, 0, 0);
       return {
         preset: "30d",
         startDate: start.toISOString(),
@@ -48,23 +51,33 @@ export function getDateRangeFromPreset(preset: DateRangePreset, customStart?: st
       };
     case "90d":
       start.setDate(now.getDate() - 90);
+      start.setHours(0, 0, 0, 0);
       return {
         preset: "90d",
         startDate: start.toISOString(),
         endDate: end.toISOString(),
         label: "Last 90 days"
       };
-    case "custom":
+    case "custom": {
+      const s = customStart ? new Date(customStart) : new Date(now.getTime() - 30 * 86400000);
+      s.setHours(0, 0, 0, 0);
+      const e = customEnd ? new Date(customEnd) : new Date(now);
+      e.setHours(23, 59, 59, 999);
+      const sStr = s.toISOString().split("T")[0];
+      const eStr = e.toISOString().split("T")[0];
       return {
         preset: "custom",
-        startDate: customStart || new Date(now.setDate(now.getDate() - 30)).toISOString(),
-        endDate: customEnd || new Date().toISOString(),
-        label: "Custom range"
+        startDate: s.toISOString(),
+        endDate: e.toISOString(),
+        label: `${sStr} - ${eStr}`
       };
+    }
     default:
+      start.setDate(now.getDate() - 30);
+      start.setHours(0, 0, 0, 0);
       return {
         preset: "30d",
-        startDate: new Date(now.setDate(now.getDate() - 30)).toISOString(),
+        startDate: start.toISOString(),
         endDate: end.toISOString(),
         label: "Last 30 days"
       };
@@ -73,9 +86,15 @@ export function getDateRangeFromPreset(preset: DateRangePreset, customStart?: st
 
 export function DateRangePicker({ value, onChange, className = "" }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [customStart, setCustomStart] = useState(value.startDate.split("T")[0]);
-  const [customEnd, setCustomEnd] = useState(value.endDate.split("T")[0]);
+  const [customStart, setCustomStart] = useState(value.startDate ? value.startDate.split("T")[0] : "");
+  const [customEnd, setCustomEnd] = useState(value.endDate ? value.endDate.split("T")[0] : "");
   const ref = useRef<HTMLDivElement>(null);
+
+  // Keep custom inputs synced when parent value changes
+  useEffect(() => {
+    if (value.startDate) setCustomStart(value.startDate.split("T")[0]);
+    if (value.endDate) setCustomEnd(value.endDate.split("T")[0]);
+  }, [value.startDate, value.endDate]);
 
   const presets: { id: DateRangePreset; label: string }[] = [
     { id: "today", label: "Today" },
@@ -97,11 +116,15 @@ export function DateRangePicker({ value, onChange, className = "" }: DateRangePi
 
   const handleSelectPreset = (preset: DateRangePreset) => {
     if (preset === "custom") {
+      const s = new Date(customStart || value.startDate);
+      s.setHours(0, 0, 0, 0);
+      const eDate = new Date(customEnd || value.endDate);
+      eDate.setHours(23, 59, 59, 999);
       onChange({
         preset: "custom",
-        startDate: new Date(customStart).toISOString(),
-        endDate: new Date(customEnd).toISOString(),
-        label: "Custom Range"
+        startDate: s.toISOString(),
+        endDate: eDate.toISOString(),
+        label: `${customStart || value.startDate.split("T")[0]} - ${customEnd || value.endDate.split("T")[0]}`
       });
     } else {
       const range = getDateRangeFromPreset(preset);
@@ -114,6 +137,7 @@ export function DateRangePicker({ value, onChange, className = "" }: DateRangePi
     e.preventDefault();
     if (customStart && customEnd) {
       const s = new Date(customStart);
+      s.setHours(0, 0, 0, 0);
       const eDate = new Date(customEnd);
       eDate.setHours(23, 59, 59, 999);
       onChange({
@@ -139,7 +163,7 @@ export function DateRangePicker({ value, onChange, className = "" }: DateRangePi
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-1.5 w-64 bg-dash-surface border border-dash-border rounded-xl shadow-xl z-50 p-2 text-xs animate-in fade-in duration-100">
+        <div className="absolute right-0 mt-1.5 w-64 bg-dash-surface border border-dash-border rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 z-50 p-2 text-xs animate-in fade-in duration-100">
           <div className="space-y-1 pb-2 border-b border-dash-border-hairline">
             {presets.map((p) => (
               <button
@@ -148,7 +172,7 @@ export function DateRangePicker({ value, onChange, className = "" }: DateRangePi
                 onClick={() => handleSelectPreset(p.id)}
                 className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between text-xs transition-colors ${
                   value.preset === p.id
-                    ? "bg-[#EA6639]/10 text-[#EA6639] font-semibold"
+                    ? "bg-[#EA6639]/15 dark:bg-[#EA6639]/25 text-[#EA6639] font-semibold"
                     : "text-dash-text-sec hover:bg-dash-surface-hover hover:text-dash-text"
                 }`}
               >
@@ -166,7 +190,7 @@ export function DateRangePicker({ value, onChange, className = "" }: DateRangePi
                   type="date"
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
-                  className="w-full px-2 py-1 bg-dash-canvas border border-dash-border rounded text-xs text-dash-text focus:outline-none focus:ring-1 focus:ring-[#EA6639]"
+                  className="w-full px-2.5 py-1.5 bg-dash-canvas border border-dash-border rounded-lg text-xs text-dash-text focus:outline-none focus:ring-1 focus:ring-[#EA6639] [color-scheme:light] dark:[color-scheme:dark]"
                   required
                 />
               </div>
@@ -176,13 +200,13 @@ export function DateRangePicker({ value, onChange, className = "" }: DateRangePi
                   type="date"
                   value={customEnd}
                   onChange={(e) => setCustomEnd(e.target.value)}
-                  className="w-full px-2 py-1 bg-dash-canvas border border-dash-border rounded text-xs text-dash-text focus:outline-none focus:ring-1 focus:ring-[#EA6639]"
+                  className="w-full px-2.5 py-1.5 bg-dash-canvas border border-dash-border rounded-lg text-xs text-dash-text focus:outline-none focus:ring-1 focus:ring-[#EA6639] [color-scheme:light] dark:[color-scheme:dark]"
                   required
                 />
               </div>
               <button
                 type="submit"
-                className="w-full py-1.5 bg-[#EA6639] text-white rounded font-medium text-xs hover:bg-[#EA6639]/90 transition-colors"
+                className="w-full py-1.5 bg-[#EA6639] text-white rounded-lg font-semibold text-xs hover:bg-[#EA6639]/90 transition-colors shadow-xs"
               >
                 Apply Range
               </button>

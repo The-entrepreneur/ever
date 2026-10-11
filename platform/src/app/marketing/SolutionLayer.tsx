@@ -4,7 +4,7 @@ import { Check } from "lucide-react";
 export function SolutionLayer() {
   return (
     <>
-      {/* Frontline Support / GCE Section - Light Theme */}
+      {/* Frontline Support / Concierge Layer Section - Light Theme */}
       <section id="solution-layer" className="py-16 sm:py-20 bg-[#F9F6F0] border-t border-black/5">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-14 items-start">
@@ -19,7 +19,7 @@ export function SolutionLayer() {
               <div className="flex gap-2 mb-4">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#E5E7EB] bg-white text-xs font-semibold text-[#111] font-mono uppercase tracking-wider">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#EA6639]"></div>
-                  Guest Concierge Engine
+                  Concierge Layer
                 </span>
               </div>
               
@@ -60,7 +60,7 @@ export function SolutionLayer() {
               </ul>
 
               <p className="mt-8 text-zinc-500 text-xs sm:text-sm leading-relaxed font-light border-t border-black/5 pt-5 max-w-lg">
-                When operational requests involve commercial services such as room upgrades, dining, spa treatments, transportation or other paid experiences, the Hospitality Commerce Agent manages the transaction while maintaining continuity across the guest journey.
+                When operational requests involve commercial services such as room upgrades, dining, spa treatments, transportation or other paid experiences, the Direct Commerce Layer manages the transaction while maintaining continuity across the guest journey.
               </p>
             </motion.div>
             

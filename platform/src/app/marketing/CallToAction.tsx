@@ -100,10 +100,10 @@ export function CallToAction() {
               className="flex flex-col sm:flex-row sm:items-center gap-4 pt-4"
             >
               <InteractiveButton
-                to="/signup"
+                to="/help-desk"
                 className="px-8 py-4 bg-zinc-950 text-white text-xs font-bold"
               >
-                Start Free
+                Schedule Infrastructure Review
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </InteractiveButton>
               
@@ -134,7 +134,7 @@ export function CallToAction() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 font-mono">GCE Live</span>
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 font-mono">CL Live</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Star className="w-3 h-3 text-[#FCD060] fill-[#FCD060]" />
@@ -148,7 +148,7 @@ export function CallToAction() {
                   AUTO-REPLY
                 </div>
                 <div className="text-center p-3">
-                  <p className="text-[11px] font-bold text-zinc-800">Guest Concierge Engine</p>
+                  <p className="text-[11px] font-bold text-zinc-800">Concierge Layer</p>
                   <p className="text-[9px] text-[#EA6639] font-mono font-medium mt-0.5">Operational Continuity</p>
                 </div>
               </div>

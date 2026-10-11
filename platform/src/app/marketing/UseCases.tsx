@@ -51,16 +51,10 @@ export function UseCasesHero() {
         </p>
 
         <div className="pt-4 flex flex-wrap gap-4">
-          <InteractiveButton to="/signup" className="text-white bg-[#EA6639] border-none px-8 py-4">
-            Deploy Ever
+          <InteractiveButton to="/help-desk" className="text-white bg-[#EA6639] border-none px-8 py-4">
+            Schedule Infrastructure Review
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </InteractiveButton>
-          <Link
-            to="/help-desk"
-            className="px-8 py-4 border border-[#111111]/25 hover:border-black font-semibold rounded-full text-xs text-zinc-900 transition-all hover:bg-zinc-100 flex items-center justify-center bg-white"
-          >
-            Talk to Solutions Engineering
-          </Link>
         </div>
       </div>
     </section>
@@ -321,8 +315,8 @@ export function PCIEngine() {
               <div className="text-2xl font-bold tracking-tight text-white mt-1">PCI-DSS Level 1</div>
               <span className="text-[9px] text-zinc-400 font-mono tracking-wide mt-1 block">Certified Payment Infrastructure</span>
             </div>
-            <InteractiveButton to="/signup" className="text-white w-full bg-[#EA6639] border-none">
-              Verify Compliance Standards
+            <InteractiveButton to="/help-desk" className="text-white w-full bg-[#EA6639] border-none">
+              Schedule Infrastructure Review
             </InteractiveButton>
           </div>
         </div>
@@ -349,17 +343,11 @@ export function UseCasesCTA() {
         
         <div className="mt-8 flex flex-col sm:flex-row gap-4 items-center">
           <InteractiveButton
-            to="/signup"
+            to="/help-desk"
             className="text-white bg-[#EA6639] border-none px-8 py-4"
           >
-            Deploy Ever
+            Schedule Infrastructure Review
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </InteractiveButton>
-          <InteractiveButton
-            to="/help-desk"
-            className="bg-white !text-zinc-700 hover:bg-zinc-50 border border-zinc-200 px-8 py-4"
-          >
-            Talk to Solutions Engineering
           </InteractiveButton>
         </div>
       </div>

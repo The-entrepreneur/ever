@@ -30,7 +30,7 @@ export function CapabilityBlocks({ blocks: customBlocks }: CapabilityBlocksProps
       id: "connected-commerce",
       badge: "COMMERCE",
       title: "Connected Commerce",
-      desc: "Qualified opportunities move seamlessly to the Hospitality Commerce Agent for bookings, payments and revenue generation.",
+      desc: "Qualified opportunities move seamlessly to the Direct Commerce Layer for bookings, payments and revenue generation.",
       icon: ShoppingBag,
       color: "from-[#EA6639]/10 to-transparent",
       iconColor: "text-[#EA6639]",

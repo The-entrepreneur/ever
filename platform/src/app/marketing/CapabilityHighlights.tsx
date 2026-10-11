@@ -100,7 +100,7 @@ export function CapabilityHighlights({ activatedCaps, level }: CapabilityHighlig
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex gap-2 text-body text-amber-800 font-light leading-relaxed">
           <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <span>
-            You are exploring the <strong>Guest Concierge Tiers</strong>. Upgrade to HCA (Commerce Agent) using the configuration panel to engage room bookings, and ancillary checkouts within this interface.
+            You are exploring the <strong>Concierge Layer</strong>. Upgrade to the Direct Commerce Layer (DCL) using the configuration panel to engage room bookings, and ancillary checkouts within this interface.
           </span>
         </div>
       )}

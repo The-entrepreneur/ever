@@ -103,7 +103,7 @@ export function Hero() {
 
               {/* CTAs Row */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8">
-                <LinkToSignup text="onboard" />
+                <LinkToSignup text="Schedule Infrastructure Review" />
                 <form onSubmit={handleDemoRequest} className="relative w-full sm:w-[280px] flex items-center shadow-sm rounded-full bg-white border border-zinc-200 overflow-hidden focus-within:border-[#EA6639]/50 focus-within:ring-1 focus-within:ring-[#EA6639]/50 transition-all">
                   <input
                     type="email"
@@ -222,7 +222,7 @@ export function Hero() {
                             </span>
                             <span className="text-[10px] text-emerald-400 font-bold">{formatMoney(100)}/night</span>
                           </div>
-                          <p className="text-[10px] text-zinc-500 leading-snug">Hospitality Commerce Agent (HCA) processes direct booking and coordinates operational workflows.</p>
+                          <p className="text-[10px] text-zinc-500 leading-snug">Direct Commerce Layer processes direct booking and coordinates operational workflows.</p>
                         </div>
                       </div>
                     </div>
@@ -332,7 +332,7 @@ export function Hero() {
                 <div className="bg-[#FCEFD2] border border-[#FADBA2] px-4 py-3 rounded-lg flex items-center justify-between shadow-sm cursor-pointer hover:scale-[1.01] transition-transform">
                   <span className="text-xs font-semibold text-[#8C600B] flex items-center gap-2">
                     <Sparkles className="w-3.5 h-3.5 fill-[#8C600B]/20" />
-                    Guest Concierge Engine
+                    Concierge Layer
                   </span>
                   <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
                 </div>
@@ -340,7 +340,7 @@ export function Hero() {
                 <div className="bg-[#EDE9FE] border border-[#DDD6FE] px-4 py-3 rounded-lg flex items-center justify-between shadow-sm cursor-pointer hover:scale-[1.01] transition-transform">
                   <span className="text-xs font-semibold text-[#5B21B6] flex items-center gap-2">
                     <Workflow className="w-3.5 h-3.5" />
-                    Hospitality Commerce Agent
+                    Direct Commerce Layer
                   </span>
                   <div className="w-1.5 h-1.5 rounded-full bg-[#7C3AED]"></div>
                 </div>
@@ -401,7 +401,7 @@ export function Hero() {
               </div>
               
               <p className="text-[11px] text-zinc-500 leading-relaxed font-light mt-2 italic text-center">
-                Select tone preference above to align the Guest Concierge Engine.
+                Select tone preference above to align the Concierge Layer.
               </p>
             </motion.div>
 
@@ -412,7 +412,7 @@ export function Hero() {
                 visible: { opacity: 1, x: 0, transition: { duration: 0.5 } }
               }}
             >
-              <LinkToSignup text="onboard now" secondary />
+              <LinkToSignup text="Schedule Infrastructure Review" secondary />
             </motion.div>
 
           </motion.div>
@@ -448,7 +448,7 @@ function LinkToSignup({ text, secondary }: { text: string; secondary?: boolean }
   if (secondary) {
     return (
       <Link 
-        to="/signup" 
+        to="/help-desk" 
         className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-[14px] font-semibold rounded-full shadow-sm hover:scale-[1.01] transition-all text-center border border-[#111111]/20 hover:bg-zinc-50 text-zinc-900 bg-white"
       >
         {text}
@@ -458,7 +458,7 @@ function LinkToSignup({ text, secondary }: { text: string; secondary?: boolean }
   }
 
   return (
-    <InteractiveButton to="/signup" className="px-6 py-3.5 text-[14px] flex items-center gap-2">
+    <InteractiveButton to="/help-desk" className="px-6 py-3.5 text-[14px] flex items-center gap-2">
       {text}
       <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
     </InteractiveButton>

@@ -104,13 +104,13 @@ export function HelpDesk() {
                 { q: "What if I need to reschedule?", a: "Life happens. You can reschedule anytime that works better, and we'll pick up right where we left off." }
               ].map((item, i) => (
                 <div key={i} className="border-b border-zinc-900/10">
-                  <button 
+                  <button
                     onClick={() => toggleAccordion(i)}
                     className="w-full flex items-center justify-between py-5 text-left focus:outline-none"
                   >
                     <span className="text-zinc-950 font-medium text-xs md:text-base pr-4">{item.q}</span>
                     <span className="text-zinc-900 relative w-4 h-4 flex-shrink-0">
-                       {activeAccordion === i ? <X className="w-4 h-4 absolute inset-0" /> : <><span className="absolute left-1/2 top-0 w-[1px] h-full bg-zinc-900 -translate-x-1/2" /><span className="absolute top-1/2 left-0 h-[1px] w-full bg-zinc-900 -translate-y-1/2" /></>}
+                      {activeAccordion === i ? <X className="w-4 h-4 absolute inset-0" /> : <><span className="absolute left-1/2 top-0 w-[1px] h-full bg-zinc-900 -translate-x-1/2" /><span className="absolute top-1/2 left-0 h-[1px] w-full bg-zinc-900 -translate-y-1/2" /></>}
                     </span>
                   </button>
                   <AnimatePresence>
@@ -137,15 +137,15 @@ export function HelpDesk() {
             <div className="grid grid-cols-3 gap-4 h-full items-center">
               <div className="bg-white p-5 rounded-2xl border border-zinc-200/60 shadow-sm text-center flex flex-col items-center justify-center aspect-square">
                 <p className="text-4xl md:text-5xl font-light text-zinc-900 mb-2 leading-none">20%</p>
-                <p className="text-xs text-zinc-500 leading-snug">Increase in direct<br/>bookings</p>
+                <p className="text-xs text-zinc-500 leading-snug">Increase in direct<br />bookings</p>
               </div>
               <div className="bg-white p-5 rounded-2xl border border-zinc-200/60 shadow-sm text-center flex flex-col items-center justify-center aspect-square">
                 <p className="text-4xl md:text-5xl font-light text-zinc-900 mb-2 leading-none">70+</p>
-                <p className="text-xs text-zinc-500 leading-snug">Built-in PMS<br/>channels</p>
+                <p className="text-xs text-zinc-500 leading-snug">Built-in PMS<br />channels</p>
               </div>
               <div className="bg-white p-5 rounded-2xl border border-zinc-200/60 shadow-sm text-center flex flex-col items-center justify-center aspect-square">
                 <p className="text-4xl md:text-5xl font-light text-zinc-900 mb-2 leading-none">32%</p>
-                <p className="text-xs text-zinc-500 leading-snug">Lift in positive<br/>reviews</p>
+                <p className="text-xs text-zinc-500 leading-snug">Lift in positive<br />reviews</p>
               </div>
             </div>
           </div>
@@ -153,7 +153,7 @@ export function HelpDesk() {
 
         <div className="mt-8 flex flex-col md:flex-row items-center justify-between text-center md:text-left gap-6 px-4">
           <p className="text-lg md:text-xl font-medium text-zinc-900 max-w-lg">
-            Trusted by leading hotels, hospitality groups, and management companies across 150 countries.
+            Trusted by leading hotels, hospitality groups, and management companies across Africa.
           </p>
           <div className="flex items-center gap-3">
             <div className="flex text-[#4F46E5]">
@@ -162,7 +162,7 @@ export function HelpDesk() {
               ))}
             </div>
             <div className="text-xs font-semibold flex items-center border-l border-zinc-300 pl-3">
-               HotelTechReport
+              HotelTechReport
             </div>
           </div>
         </div>
@@ -171,10 +171,10 @@ export function HelpDesk() {
       {/* 2. Side-by-Side Main Section */}
       <section id="contact" className="py-12 px-4 sm:px-6 lg:px-8 max-w-[1240px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          
+
           {/* Left Column: Sales Copy & ROI Indicators */}
           <div className="lg:col-span-7 space-y-12">
-            
+
             {/* Value Checkmarks */}
             <div className="space-y-6">
               <h2 className="text-3xl font-semibold tracking-tight text-zinc-900">
@@ -183,7 +183,7 @@ export function HelpDesk() {
               <p className="text-zinc-600 font-light leading-relaxed text-xs max-w-xl">
                 We'll prepare a custom live demo oriented to your properties, guide you through optimal system models, or provide procurement blueprints to guarantee your team thrives with Ever.
               </p>
-              
+
               <ul className="space-y-4">
                 {[
                   "Easily connect multiple guest data channels (WhatsApp, OTA inbox, SMS)",
@@ -209,7 +209,7 @@ export function HelpDesk() {
             {/* Secure ROI Stats Block */}
             <div className="pt-8 border-t border-zinc-200/60">
               <h3 className="text-lg font-semibold text-zinc-900 mb-6">Secure ROI with Ever</h3>
-              
+
               <div className="grid grid-cols-2 gap-x-8 gap-y-8">
                 <div>
                   <p className="text-3xl font-light text-[#EA6639]">42%</p>
@@ -409,9 +409,9 @@ export function HelpDesk() {
             </button>
           </div>
 
-          <BookingModal 
-            isOpen={isBookingModalOpen} 
-            onClose={() => setIsBookingModalOpen(false)} 
+          <BookingModal
+            isOpen={isBookingModalOpen}
+            onClose={() => setIsBookingModalOpen(false)}
           />
 
           {/* Social Columns grid (X, Instagram, YouTube, LinkedIn) */}
@@ -494,7 +494,7 @@ export function HelpDesk() {
       {/* 4. Security & Call to Action Section (Stacker 85% Match Template) */}
       <section className="py-24 border-t border-zinc-200/50 bg-[#F9F6F0]">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
-          
+
           {/* Security Standards Block */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             <div className="lg:col-span-5 text-left space-y-2">
@@ -505,12 +505,12 @@ export function HelpDesk() {
                 Secure and safe
               </h2>
             </div>
-            
+
             <div className="lg:col-span-7 flex flex-col sm:flex-row sm:items-center justify-between gap-6 lg:pl-12">
               <p className="text-xs text-zinc-500 font-light max-w-sm leading-relaxed">
                 Ever is audited and certified by industry leading Third Party standards
               </p>
-              
+
               <div className="flex flex-wrap gap-3 items-center">
                 {/* Badge 1: GDPR READY */}
                 <div className="flex items-center gap-2 px-3 py-2 bg-white border border-zinc-200/80 rounded-xl shadow-xs">
@@ -562,7 +562,7 @@ export function HelpDesk() {
 
           {/* colorful visual glass gradient CTA card */}
           <div className="relative overflow-hidden rounded-[40px] border border-white/60 shadow-2xl p-8 sm:p-12 md:p-16 bg-gradient-to-tr from-[#9DD3F5]/80 via-[#F3CBD4]/70 to-[#FFC4A9]/80 backdrop-blur-md">
-            
+
             {/* Atmospheric light blobs inside */}
             <div className="absolute -top-24 -left-24 w-96 h-96 bg-cyan-300/40 rounded-full blur-[110px] pointer-events-none" />
             <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-[#ff6b2bc2]/20 rounded-full blur-[120px] pointer-events-none" />
@@ -578,13 +578,13 @@ export function HelpDesk() {
                 <p className="text-zinc-800 font-light text-xs sm:text-base leading-relaxed max-w-md">
                   Deploy Ever's vertical middleware with $100 in initial performance credits on the house. Deep PMS mapping, direct white-label channels, and zero upfront commitment.
                 </p>
-                
+
                 <div className="flex flex-wrap gap-3 pt-2">
                   <InteractiveButton
-                    to="/signup"
+                    to="/help-desk"
                     className="px-8 py-4 bg-zinc-950 text-white text-xs"
                   >
-                    Deploy For Free
+                    Request Consultation
                   </InteractiveButton>
                   <InteractiveButton
                     to="/pricing"

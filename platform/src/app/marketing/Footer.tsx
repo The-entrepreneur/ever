@@ -19,10 +19,10 @@ export function Footer() {
 
   return (
     <footer className="bg-[#09080A] text-zinc-400 pt-24 pb-12 overflow-hidden relative select-none">
-      
+
       {/* Container holding all responsive elements */}
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
+
         {/* 1. Header Hero section inside footer - adopting Amini 85% layout */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 pb-16 border-b border-zinc-900">
           <div className="max-w-2xl space-y-3">
@@ -33,7 +33,7 @@ export function Footer() {
               Deploy autonomous guest infrastructure without replacing your PMS, staff or existing software stack.
             </p>
           </div>
-          
+
           <div className="shrink-0">
             {/* Custom Yellow/Orange Pill interactive button to match Amini's exact style */}
             <Link
@@ -43,21 +43,21 @@ export function Footer() {
               <div className="w-6 h-6 rounded-full bg-[#09080A] text-[#EA6639] flex items-center justify-center shrink-0">
                 <ArrowRight className="w-3.5 h-3.5" />
               </div>
-              <span>Book Infrastructure Review</span>
+              <span>Schedule Infrastructure Review</span>
             </Link>
           </div>
         </div>
 
         {/* 2. Middle Block: Logo statement & Newsletter */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 py-16 border-b border-zinc-900">
-          
+
           {/* Brand & Mission Statement */}
           <div className="lg:col-span-6 space-y-6">
             <Link to="/" className="inline-block hover:opacity-85 transition-opacity">
               <EverLogo height={42} showSubtitle={false} lightMode={true} />
             </Link>
             <p className="text-zinc-400 text-xs font-light max-w-sm leading-relaxed">
-              We help properties lower front-desk strain and capture direct, high-margin revenue.
+              We help hotels and hospitality businesses lower front-desk strain, capture direct high-margin revenue and efficiently coordinate guest-facing operations and commerce.
             </p>
           </div>
 
@@ -66,7 +66,7 @@ export function Footer() {
             <h4 className="text-xs font-semibold text-zinc-200 uppercase tracking-widest font-mono">
               Schedule a discovery session
             </h4>
-            
+
             <form onSubmit={handleSubscribe} className="relative">
               <div className="flex items-center gap-2 border border-zinc-800/85 bg-zinc-950/40 rounded-full px-4 py-3 focus-within:border-zinc-700/85 transition-all">
                 <Mail className="w-4 h-4 text-zinc-500 shrink-0" />
@@ -92,7 +92,7 @@ export function Footer() {
                 </p>
               )}
             </form>
-            
+
             <p className="text-[9px] font-mono font-medium tracking-widest text-[#EA6639]/80 uppercase">
               By submitting you agree to our terms.
             </p>
@@ -102,7 +102,7 @@ export function Footer() {
 
         {/* 3. Link matrices categorized columns */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 py-16 text-[13px]">
-          
+
           {/* Col 1 */}
           <div className="space-y-5">
             <h5 className="text-[11px] font-mono uppercase text-zinc-500 tracking-widest font-bold">
@@ -111,12 +111,12 @@ export function Footer() {
             <ul className="space-y-3.5 font-light">
               <li>
                 <Link to="/guest-concierge" className="hover:text-zinc-100 transition-colors block">
-                  Guest Concierge Engine
+                  Guest Concierge Layer
                 </Link>
               </li>
               <li>
                 <Link to="/commerce-agent" className="hover:text-zinc-100 transition-colors block">
-                  Hospitality Commerce Agent
+                  Direct Commerce Layer
                 </Link>
               </li>
               <li>
@@ -158,7 +158,7 @@ export function Footer() {
               </li>
               <li>
                 <Link to="/help-desk" className="hover:text-zinc-100 transition-colors block">
-                  Help Desk Support
+                  Schedule Infrastructure Review
                 </Link>
               </li>
               <li>
@@ -182,7 +182,7 @@ export function Footer() {
               </li>
               <li>
                 <span className="text-zinc-800 cursor-not-allowed flex items-center justify-between">
-                  Careers 
+                  Careers
                   <span className="text-[9px] bg-zinc-900 border border-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wider scale-90">
                     We're hiring
                   </span>
@@ -220,7 +220,7 @@ export function Footer() {
               </li>
             </ul>
           </div>
-          
+
           {/* Col 5 - SOCIALS & MEDIA */}
           <div className="space-y-5">
             <h5 className="text-[11px] font-mono uppercase text-zinc-500 tracking-widest font-bold">

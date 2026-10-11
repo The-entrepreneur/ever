@@ -85,11 +85,9 @@ export function Terms() {
           
           <div className="mt-8 flex justify-center gap-4">
             <InteractiveButton
-              to="/signup"
+              to="/help-desk"
               className="text-white"
-            >
-              Onboard
-            </InteractiveButton>
+            >Contact Help Desk</InteractiveButton>
             <InteractiveButton
               to="/pricing"
               className="px-6 py-2.5 bg-white border border-zinc-200 !text-zinc-700 rounded-full text-xs font-semibold hover:bg-zinc-50 transition-colors"

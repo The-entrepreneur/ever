@@ -203,35 +203,43 @@ model handoff_sessions {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model hotels {
-  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  slug               String               @unique @db.VarChar(100)
-  name               String               @db.VarChar(255)
-  created_at         DateTime?            @default(now()) @db.Timestamp(6)
-  audit_log          audit_log[]
-  booking_events     booking_events[]
-  bookings           bookings[]
-  consent_records    consent_records[]
-  conversations      conversations[]
-  dpa_records        dpa_records[]
-  dsr_requests       dsr_requests[]
-  faqs               faqs[]
-  feedback           feedback[]
-  folio_charges      folio_charges[]
-  handoff_sessions   handoff_sessions[]
-  leads              leads[]
-  marketing_optins   marketing_optins[]
-  menu_items         menu_items[]
-  message_events     message_events[]
-  monthly_invoices   monthly_invoices[]
-  notifications      notifications[]
-  orders             orders[]
-  push_subscriptions push_subscriptions[]
-  rooms              rooms[]
-  service_requests   service_requests[]
-  subscriptions      subscriptions[]
-  upsells            upsells[]
-  users              users[]
-  whatsapp_accounts  whatsapp_accounts[]
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug                 String                 @unique @db.VarChar(100)
+  name                 String                 @db.VarChar(255)
+  created_at           DateTime?              @default(now()) @db.Timestamp(6)
+  setup_complete       Boolean?               @default(false)
+  address              String?
+  timezone             String?                @db.VarChar(100)
+  currency             String?                @db.VarChar(10)
+  primary_color        String?                @db.VarChar(20)
+  config               Json?                  @default("{}")
+  audit_log            audit_log[]
+  booking_events       booking_events[]
+  bookings             bookings[]
+  consent_records      consent_records[]
+  conversations        conversations[]
+  dpa_records          dpa_records[]
+  dsr_requests         dsr_requests[]
+  faqs                 faqs[]
+  feedback             feedback[]
+  folio_charges        folio_charges[]
+  handoff_sessions     handoff_sessions[]
+  knowledge_embeddings knowledge_embeddings[]
+  knowledge_sources    knowledge_sources[]
+  leads                leads[]
+  marketing_optins     marketing_optins[]
+  menu_items           menu_items[]
+  message_events       message_events[]
+  monthly_invoices     monthly_invoices[]
+  notifications        notifications[]
+  orders               orders[]
+  push_subscriptions   push_subscriptions[]
+  rooms                rooms[]
+  service_requests     service_requests[]
+  subscriptions        subscriptions[]
+  upsells              upsells[]
+  users                users[]
+  whatsapp_accounts    whatsapp_accounts[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -473,6 +481,10 @@ model users {
   online_status          Boolean?             @default(false)
   last_login             DateTime?            @db.Timestamp(6)
   created_at             DateTime?            @default(now()) @db.Timestamp(6)
+  mobile_number          String?              @db.VarChar(50)
+  business_address       String?
+  property_type          String?              @db.VarChar(100)
+  pms                    String?              @db.VarChar(100)
   audit_log              audit_log[]
   notifications          notifications[]
   push_subscriptions     push_subscriptions[]
@@ -500,6 +512,35 @@ model whatsapp_accounts {
 
   @@unique([hotel_id, phone_number], map: "idx_whatsapp_accounts_hotel_phone")
   @@index([hotel_id], map: "idx_whatsapp_accounts_hotel_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model knowledge_embeddings {
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hotel_id          String                 @db.Uuid
+  source_id         String?                @db.Uuid
+  content           String
+  embedding         Unsupported("vector")?
+  metadata          Json?                  @default("{}")
+  created_at        DateTime?              @default(now()) @db.Timestamp(6)
+  hotels            hotels                 @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  knowledge_sources knowledge_sources?     @relation(fields: [source_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model knowledge_sources {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hotel_id             String                 @db.Uuid
+  type                 String                 @db.VarChar(50)
+  name                 String                 @db.VarChar(255)
+  config               Json?                  @default("{}")
+  status               String?                @default("syncing") @db.VarChar(50)
+  last_synced          DateTime?              @db.Timestamp(6)
+  created_at           DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at           DateTime?              @default(now()) @db.Timestamp(6)
+  knowledge_embeddings knowledge_embeddings[]
+  hotels               hotels                 @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 enum booking_status {

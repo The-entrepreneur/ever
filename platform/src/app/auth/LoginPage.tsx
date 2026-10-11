@@ -104,7 +104,7 @@ export function LoginPage() {
                       Welcome!
                     </h1>
                     <p className="text-sm text-zinc-600">
-                      <Link to="/signup" className="font-semibold text-zinc-900 underline hover:no-underline">Create a free account</Link> or log in to get started using Ever
+                      Log in with your hotel credentials, or visit our <Link to="/help-desk" className="font-semibold text-zinc-900 underline hover:no-underline">Help Desk</Link> for activation assistance
                     </p>
                   </div>
 
