@@ -84,7 +84,8 @@ export const localCache = {
       connected_at: new Date().toISOString()
     }
   ],
-  pushSubscriptions: [] as any[]
+  pushSubscriptions: [] as any[],
+  contactSubmissions: [] as any[]
 };
 
 let _aiClient: GoogleGenAI | null = null;

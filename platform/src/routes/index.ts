@@ -7,6 +7,7 @@ import calendarRoutes from "./calendar.js";
 import geminiRoutes from "./gemini.js";
 import templatesRoutes from "./templates.js";
 import conversationsRoutes from "./conversations.js";
+import contactRoutes from "./contact.js";
 
 const apiRouter = Router();
 
@@ -18,5 +19,6 @@ apiRouter.use("/calendar", calendarRoutes);
 apiRouter.use("/gemini", geminiRoutes);
 apiRouter.use("/templates", templatesRoutes);
 apiRouter.use("/conversations", conversationsRoutes);
+apiRouter.use("/contact", contactRoutes);
 
 export default apiRouter;

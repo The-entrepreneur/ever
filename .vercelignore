@@ -1,0 +1,17 @@
+# Vercel Ignore - Exclude non-frontend monorepo directories
+backend-api/
+base/
+widget/
+scripts/
+supabase/
+.agents/
+PRD/
+*.py
+*.pyc
+__pycache__/
+*.sh
+*.bat
+docker-compose*.yml
+Dockerfile*
+.git/
+.vscode/
