@@ -655,7 +655,7 @@ export function HelpDesk() {
                     to="/help-desk"
                     className="px-8 py-4 bg-zinc-950 text-white text-xs"
                   >
-                    Request Consultation
+                    Schedule Infrastructure Review
                   </InteractiveButton>
                   <InteractiveButton
                     to="/pricing"

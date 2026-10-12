@@ -74,7 +74,7 @@ const TIER_META = {
 };
 
 export function BillingTab() {
-  const { hotelId } = useAuth();
+  const { hotelId, user } = useAuth();
   const { isSandbox, data: sandboxData, regenerate } = useSandbox();
   const { formatMoney } = useCurrency();
   const { showToast } = useToast();
@@ -82,12 +82,13 @@ export function BillingTab() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
   const [updatingPayment, setUpdatingPayment] = useState(false);
-  const [clientConfig, setClientConfig] = useState<TenantCommercialConfig>({
+  // Sandbox demo config — never used for live accounts
+  const SANDBOX_DEFAULT_CONFIG: TenantCommercialConfig = {
     name: "The Grand Azure Hotel",
     room_count: 42,
     estate_tier: "estate",
     base_platform_fee: 299,
-    attribution_rate: 0.025, // 2.5%
+    attribution_rate: 0.025,
     onboarding_fee: 750,
     onboarding_status: "paid",
     operational_modules: {
@@ -97,43 +98,116 @@ export function BillingTab() {
       maintenance: true,
       upsells: true,
     },
-  });
+  };
 
-  // Load live tenant configuration from admin storage if available
+  // Live account config — null until loaded from real admin record
+  const [clientConfig, setClientConfig] = useState<TenantCommercialConfig | null>(null);
+
+  // Load real tenant configuration — strictly matched to hotelId / user metadata, no mock fallbacks
   useEffect(() => {
+    if (isSandbox) {
+      setClientConfig(SANDBOX_DEFAULT_CONFIG);
+      return;
+    }
     try {
+      // 1. Check admin clients registry
       const stored = localStorage.getItem("ever_admin_clients");
       if (stored) {
         const clients = JSON.parse(stored);
         if (Array.isArray(clients) && clients.length > 0) {
-          const match = clients.find((c: any) => c.id === hotelId || c.hotel_slug === hotelId) || clients[0];
+          const match = clients.find((c: any) => c.id === hotelId || c.hotel_slug === hotelId || c.slug === hotelId);
           if (match) {
             setClientConfig({
               name: match.name || "Active Property",
-              room_count: match.room_count || 42,
-              estate_tier: match.estate_tier || "estate",
-              base_platform_fee: match.base_platform_fee || 299,
-              attribution_rate: match.attribution_rate || 0.025,
-              onboarding_fee: match.onboarding_fee || 750,
-              onboarding_status: match.onboarding_status || "paid",
-              operational_modules: match.operational_modules || {
-                direct_bookings: true,
-                housekeeping: true,
-                room_service: true,
-                maintenance: true,
-                upsells: true,
+              room_count: match.room_count ?? match.roomCount ?? 0,
+              estate_tier: match.estate_tier || match.tier || "select",
+              base_platform_fee: match.base_platform_fee ?? match.baseFee ?? 0,
+              attribution_rate: match.attribution_rate ?? match.attributionRate ?? 0,
+              onboarding_fee: match.onboarding_fee ?? match.onboardingFee ?? 0,
+              onboarding_status: match.onboarding_status || match.onboardingStatus || "pending",
+              operational_modules: match.operational_modules || match.operationalModules || {
+                direct_bookings: false,
+                housekeeping: false,
+                room_service: false,
+                maintenance: false,
+                upsells: false,
               },
             });
+            return;
           }
         }
+      }
+
+      // 2. Check claimed invites
+      const activeSlug = localStorage.getItem("ever_active_hotel_slug");
+      const invitesRaw = localStorage.getItem("ever_onboarding_invites_v1");
+      if (invitesRaw) {
+        const invites = JSON.parse(invitesRaw);
+        if (Array.isArray(invites)) {
+          const match = invites.find((inv: any) =>
+            (activeSlug && inv.hotel_slug === activeSlug) ||
+            inv.hotel_slug === hotelId ||
+            inv.id === hotelId
+          );
+          if (match) {
+            setClientConfig({
+              name: match.hotel_name || "Active Property",
+              room_count: match.room_count ?? 0,
+              estate_tier: match.tier || "select",
+              base_platform_fee: match.base_platform_fee ?? 0,
+              attribution_rate: match.attribution_rate ?? 0,
+              onboarding_fee: match.onboarding_fee ?? 0,
+              onboarding_status: match.onboarding_status || "pending",
+              operational_modules: match.operational_modules || {
+                direct_bookings: false,
+                housekeeping: false,
+                room_service: false,
+                maintenance: false,
+                upsells: false,
+              },
+            });
+            return;
+          }
+        }
+      }
+
+      // 3. Fallback to authenticated tenant profile metadata
+      if (user?.user_metadata) {
+        const meta = user.user_metadata;
+        const tier = (meta.tier as "select" | "estate" | "resort" | "portfolio") || "select";
+        const tierDefaults = {
+          select: { rooms: 20, base: 99, rate: 0.03, setup: 300 },
+          estate: { rooms: 36, base: 349, rate: 0.025, setup: 650 },
+          resort: { rooms: 75, base: 599, rate: 0.02, setup: 1200 },
+          portfolio: { rooms: 150, base: 1200, rate: 0.015, setup: 2500 },
+        }[tier] || { rooms: 20, base: 99, rate: 0.03, setup: 300 };
+
+        setClientConfig({
+          name: meta.business_name || meta.hotel_name || meta.property_name || "Active Property",
+          room_count: meta.room_count || tierDefaults.rooms,
+          estate_tier: tier,
+          base_platform_fee: meta.base_platform_fee ?? tierDefaults.base,
+          attribution_rate: meta.attribution_rate ?? tierDefaults.rate,
+          onboarding_fee: meta.onboarding_fee ?? tierDefaults.setup,
+          onboarding_status: meta.onboarding_status || "pending",
+          operational_modules: meta.operational_modules || {
+            direct_bookings: true,
+            housekeeping: true,
+            room_service: true,
+            maintenance: true,
+            upsells: true,
+          },
+        });
       }
     } catch (e) {
       console.warn("Failed to load admin client commercial terms", e);
     }
-  }, [hotelId]);
+  }, [hotelId, isSandbox, user]);
 
   // Dynamic calculation for the 10 Qualifying Revenue Streams
-  const qualifyingStreams = useMemo(() => {
+  // Sandbox-only: mock qualifying revenue streams
+  const sandboxQualifyingStreams = useMemo(() => {
+    if (!isSandbox || !clientConfig) return null;
     const rate = clientConfig.attribution_rate;
     const bookings = sandboxData?.bookings || [];
     const confirmedBookings = bookings.filter(b => b.status === "Confirmed");
@@ -141,179 +215,56 @@ export function BillingTab() {
     const directCount = confirmedBookings.length || 9;
 
     const streams = [
-      {
-        id: "stream-1",
-        name: "1. Direct Room Bookings",
-        channel: "WhatsApp & Web Direct Checkout",
-        description: "Autonomous guest reservations completed via Ever checkout",
-        count: directCount,
-        gross: dynamicDirectBookingGross,
-        otaCommissionSaved: dynamicDirectBookingGross * 0.20, // 20% avg OTA commission saved
-        icon: Bed,
-      },
-      {
-        id: "stream-2",
-        name: "2. Room Category Upgrades",
-        channel: "Pre-Arrival WhatsApp Automation",
-        description: "In-chat upgrades to Deluxe suites, ocean views, and villas",
-        count: 7,
-        gross: 1850.00,
-        otaCommissionSaved: 370.00,
-        icon: TrendingUp,
-      },
-      {
-        id: "stream-3",
-        name: "3. Late Check-Out Privileges",
-        channel: "In-Stay Assistant & SMS",
-        description: "Monetized departure extensions confirmed against housekeeping SLA",
-        count: 14,
-        gross: 640.00,
-        otaCommissionSaved: 128.00,
-        icon: Clock,
-      },
-      {
-        id: "stream-4",
-        name: "4. Early Check-In Authorizations",
-        channel: "Arrival Morning Notification",
-        description: "Pre-3:00 PM room availability monetization",
-        count: 8,
-        gross: 420.00,
-        otaCommissionSaved: 84.00,
-        icon: Clock,
-      },
-      {
-        id: "stream-5",
-        name: "5. Breakfast Packages",
-        channel: "Booking Add-On & Morning Greeting",
-        description: "Buffet & continental breakfast inclusions purchased in-chat",
-        count: 18,
-        gross: 1120.00,
-        otaCommissionSaved: 224.00,
-        icon: UtensilsCrossed,
-      },
-      {
-        id: "stream-6",
-        name: "6. In-Chat Room Service (F&B)",
-        channel: "WhatsApp / In-Room QR Widget",
-        description: "Autonomous in-room dining orders sent straight to POS/kitchen",
-        count: 32,
-        gross: 2480.00,
-        otaCommissionSaved: 496.00,
-        icon: UtensilsCrossed,
-      },
-      {
-        id: "stream-7",
-        name: "7. Airport & Chauffeur Transfers",
-        channel: "Pre-Stay Concierge Prompt",
-        description: "Private executive vehicle scheduling and terminal pickups",
-        count: 6,
-        gross: 850.00,
-        otaCommissionSaved: 170.00,
-        icon: Car,
-      },
-      {
-        id: "stream-8",
-        name: "8. Curated Experiences & Excursions",
-        channel: "Local Discovery Engine",
-        description: "Spa treatments, private catamaran rentals, and vineyard tastings",
-        count: 9,
-        gross: 1600.00,
-        otaCommissionSaved: 320.00,
-        icon: Compass,
-      },
-      {
-        id: "stream-9",
-        name: "9. Equipment & Amenity Rentals",
-        channel: "Interactive Concierge",
-        description: "Cabanas, bicycles, audiovisual equipment, and boardroom bookings",
-        count: 5,
-        gross: 380.00,
-        otaCommissionSaved: 76.00,
-        icon: Layers,
-      },
-      {
-        id: "stream-10",
-        name: "10. Ancillary Property Add-Ons",
-        channel: "Folio Monetization Layer",
-        description: "Champagne arrivals, artisan florals, pet fees, and valet parking",
-        count: 11,
-        gross: 520.00,
-        otaCommissionSaved: 104.00,
-        icon: Sparkles,
-      },
+      { id: "stream-1", name: "1. Direct Room Bookings", channel: "WhatsApp & Web Direct Checkout", description: "Autonomous guest reservations completed via Ever checkout", count: directCount, gross: dynamicDirectBookingGross, otaCommissionSaved: dynamicDirectBookingGross * 0.20, icon: Bed },
+      { id: "stream-2", name: "2. Room Category Upgrades", channel: "Pre-Arrival WhatsApp Automation", description: "In-chat upgrades to Deluxe suites, ocean views, and villas", count: 7, gross: 1850.00, otaCommissionSaved: 370.00, icon: TrendingUp },
+      { id: "stream-3", name: "3. Late Check-Out Privileges", channel: "In-Stay Assistant & SMS", description: "Monetized departure extensions confirmed against housekeeping SLA", count: 14, gross: 640.00, otaCommissionSaved: 128.00, icon: Clock },
+      { id: "stream-4", name: "4. Early Check-In Authorizations", channel: "Arrival Morning Notification", description: "Pre-3:00 PM room availability monetization", count: 8, gross: 420.00, otaCommissionSaved: 84.00, icon: Clock },
+      { id: "stream-5", name: "5. Breakfast Packages", channel: "Booking Add-On & Morning Greeting", description: "Buffet & continental breakfast inclusions purchased in-chat", count: 18, gross: 1120.00, otaCommissionSaved: 224.00, icon: UtensilsCrossed },
+      { id: "stream-6", name: "6. In-Chat Room Service (F&B)", channel: "WhatsApp / In-Room QR Widget", description: "Autonomous in-room dining orders sent straight to POS/kitchen", count: 32, gross: 2480.00, otaCommissionSaved: 496.00, icon: UtensilsCrossed },
+      { id: "stream-7", name: "7. Airport & Chauffeur Transfers", channel: "Pre-Stay Concierge Prompt", description: "Private executive vehicle scheduling and terminal pickups", count: 6, gross: 850.00, otaCommissionSaved: 170.00, icon: Car },
+      { id: "stream-8", name: "8. Curated Experiences & Excursions", channel: "Local Discovery Engine", description: "Spa treatments, private catamaran rentals, and vineyard tastings", count: 9, gross: 1600.00, otaCommissionSaved: 320.00, icon: Compass },
+      { id: "stream-9", name: "9. Equipment & Amenity Rentals", channel: "Interactive Concierge", description: "Cabanas, bicycles, audiovisual equipment, and boardroom bookings", count: 5, gross: 380.00, otaCommissionSaved: 76.00, icon: Layers },
+      { id: "stream-10", name: "10. Ancillary Property Add-Ons", channel: "Folio Monetization Layer", description: "Champagne arrivals, artisan florals, pet fees, and valet parking", count: 11, gross: 520.00, otaCommissionSaved: 104.00, icon: Sparkles },
     ];
-
     const totalGross = streams.reduce((acc, s) => acc + s.gross, 0);
-    const totalPerformanceFee = totalGross * rate;
-    const totalOtaSaved = streams.reduce((acc, s) => acc + s.otaCommissionSaved, 0);
-    const totalTransactions = streams.reduce((acc, s) => acc + s.count, 0);
+    return { streams, totalGross, totalPerformanceFee: totalGross * rate, totalOtaSaved: streams.reduce((acc, s) => acc + s.otaCommissionSaved, 0), totalTransactions: streams.reduce((acc, s) => acc + s.count, 0), rate };
+  }, [isSandbox, sandboxData?.bookings, clientConfig]);
 
-    return {
-      streams,
-      totalGross,
-      totalPerformanceFee,
-      totalOtaSaved,
-      totalTransactions,
-      rate,
-    };
-  }, [sandboxData?.bookings, clientConfig.attribution_rate]);
+  // Live account: empty qualifying streams zero-state
+  const liveQualifyingStreams = { streams: [], totalGross: 0, totalPerformanceFee: 0, totalOtaSaved: 0, totalTransactions: 0, rate: clientConfig?.attribution_rate ?? 0 };
 
-  // Usage & Pass-Through metrics
+  const qualifyingStreams = (isSandbox && sandboxQualifyingStreams) ? sandboxQualifyingStreams : liveQualifyingStreams;
+
+  // Usage & Pass-Through metrics — sandbox only shows mock conversation counts
   const usagePassThrough = useMemo(() => {
     const includedConversations = 1000;
-    const activeConversations = 1240;
+    const activeConversations = isSandbox ? 1240 : 0; // live: real data not yet wired
     const overageConversations = Math.max(0, activeConversations - includedConversations);
-    const perConversationCost = 0.05; // $0.05 Meta pass-through per conversation
-    const passThroughAmount = overageConversations * perConversationCost;
-
+    const perConversationCost = 0.05;
     return {
       includedConversations,
       activeConversations,
       overageConversations,
       perConversationCost,
-      passThroughAmount,
+      passThroughAmount: overageConversations * perConversationCost,
     };
-  }, []);
+  }, [isSandbox]);
 
-  // Grand Total Current Cycle Formula: Base Fee + Performance Fee + Pass-Through
+  // Grand Total Current Cycle
   const totalInvoiceCurrent = useMemo(() => {
-    return clientConfig.base_platform_fee + qualifyingStreams.totalPerformanceFee + usagePassThrough.passThroughAmount;
-  }, [clientConfig.base_platform_fee, qualifyingStreams.totalPerformanceFee, usagePassThrough.passThroughAmount]);
+    const base = clientConfig?.base_platform_fee ?? 0;
+    return base + qualifyingStreams.totalPerformanceFee + usagePassThrough.passThroughAmount;
+  }, [clientConfig, qualifyingStreams.totalPerformanceFee, usagePassThrough.passThroughAmount]);
 
+  // Invoices — sandbox only shows mock historical invoices; live shows empty state
   const invoices = useMemo(() => {
+    if (!isSandbox || !clientConfig) return [];
     return [
-      { 
-        id: "INV-2026-009", 
-        period: "Aug 1 - Aug 31, 2026", 
-        baseFee: clientConfig.base_platform_fee,
-        attributedRev: 21850.00,
-        performanceFee: 21850.00 * clientConfig.attribution_rate,
-        passThrough: 15.20,
-        amount: clientConfig.base_platform_fee + (21850.00 * clientConfig.attribution_rate) + 15.20, 
-        status: "Paid" as const 
-      },
-      { 
-        id: "INV-2026-008", 
-        period: "Jul 1 - Jul 31, 2026", 
-        baseFee: clientConfig.base_platform_fee,
-        attributedRev: 19400.00,
-        performanceFee: 19400.00 * clientConfig.attribution_rate,
-        passThrough: 8.50,
-        amount: clientConfig.base_platform_fee + (19400.00 * clientConfig.attribution_rate) + 8.50, 
-        status: "Paid" as const 
-      },
-      { 
-        id: "INV-2026-007", 
-        period: "Jun 1 - Jun 30, 2026", 
-        baseFee: clientConfig.base_platform_fee,
-        attributedRev: 16200.00,
-        performanceFee: 16200.00 * clientConfig.attribution_rate,
-        passThrough: 0.00,
-        amount: clientConfig.base_platform_fee + (16200.00 * clientConfig.attribution_rate), 
-        status: "Paid" as const 
-      },
+      { id: "INV-2026-009", period: "Aug 1 - Aug 31, 2026", baseFee: clientConfig.base_platform_fee, attributedRev: 21850.00, performanceFee: 21850.00 * clientConfig.attribution_rate, passThrough: 15.20, amount: clientConfig.base_platform_fee + (21850.00 * clientConfig.attribution_rate) + 15.20, status: "Paid" as const },
+      { id: "INV-2026-008", period: "Jul 1 - Jul 31, 2026", baseFee: clientConfig.base_platform_fee, attributedRev: 19400.00, performanceFee: 19400.00 * clientConfig.attribution_rate, passThrough: 8.50, amount: clientConfig.base_platform_fee + (19400.00 * clientConfig.attribution_rate) + 8.50, status: "Paid" as const },
+      { id: "INV-2026-007", period: "Jun 1 - Jun 30, 2026", baseFee: clientConfig.base_platform_fee, attributedRev: 16200.00, performanceFee: 16200.00 * clientConfig.attribution_rate, passThrough: 0.00, amount: clientConfig.base_platform_fee + (16200.00 * clientConfig.attribution_rate), status: "Paid" as const },
     ];
-  }, [clientConfig.base_platform_fee, clientConfig.attribution_rate]);
+  }, [isSandbox, clientConfig]);
 
   const handleDownloadInvoice = (invoiceId: string) => {
     showToast(`Downloading itemized tax invoice PDF for ${invoiceId}...`, "info");
@@ -333,7 +284,7 @@ export function BillingTab() {
     }, 800);
   };
 
-  const tierInfo = TIER_META[clientConfig.estate_tier] || TIER_META.estate;
+  const tierInfo = clientConfig ? (TIER_META[clientConfig.estate_tier] || TIER_META.estate) : TIER_META.select;
 
   return (
     <div className="p-3 md:p-6 space-y-6 dashboard-interactive h-full overflow-y-auto hide-scrollbar">
@@ -347,7 +298,7 @@ export function BillingTab() {
             </span>
           </div>
           <p className="text-xs text-dash-text-sec mt-1">
-            Reconciles your Guest OS monthly subscription, Ever-attributed revenue dividend ({(clientConfig.attribution_rate * 100).toFixed(1)}%), and WhatsApp Meta pass-through costs.
+            Reconciles your Guest OS monthly subscription{clientConfig ? `, Ever-attributed revenue dividend (${(clientConfig.attribution_rate * 100).toFixed(1)}%)` : ""}, and WhatsApp Meta pass-through costs.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto shrink-0">
@@ -394,11 +345,11 @@ export function BillingTab() {
               </span>
             </div>
             <div className="flex items-baseline gap-2 mb-1">
-              <h3 className="text-2xl font-black text-dash-text">{formatMoney(clientConfig.base_platform_fee)}</h3>
+              <h3 className="text-2xl font-black text-dash-text">{formatMoney(clientConfig?.base_platform_fee ?? 0)}</h3>
               <span className="text-xs text-dash-text-muted font-medium">/ month base</span>
             </div>
             <p className="text-xs text-dash-text-sec mb-3">
-              Configured for <strong className="text-dash-text">{clientConfig.room_count} Rooms &amp; Suites</strong>
+              Configured for <strong className="text-dash-text">{clientConfig?.room_count ?? "—"} Rooms &amp; Suites</strong>
             </p>
 
             <div className="p-2.5 bg-dash-canvas/80 rounded-lg border border-dash-border text-[11px] space-y-1.5">
@@ -408,12 +359,12 @@ export function BillingTab() {
               </div>
               <div className="flex justify-between items-center text-dash-text-sec">
                 <span>Attribution Dividend:</span>
-                <span className="font-bold text-[#EA6639]">{(clientConfig.attribution_rate * 100).toFixed(1)}% qualifying rev</span>
+                <span className="font-bold text-[#EA6639]">{((clientConfig?.attribution_rate ?? 0) * 100).toFixed(1)}% qualifying rev</span>
               </div>
               <div className="flex justify-between items-center text-dash-text-sec">
                 <span>Implementation Fee:</span>
                 <span className="capitalize font-semibold text-dash-text">
-                  {formatMoney(clientConfig.onboarding_fee)} ({clientConfig.onboarding_status})
+                  {formatMoney(clientConfig?.onboarding_fee ?? 0)} ({clientConfig?.onboarding_status ?? "pending"})
                 </span>
               </div>
             </div>
@@ -422,11 +373,11 @@ export function BillingTab() {
           <div className="pt-3 mt-3 border-t border-dash-border flex items-center justify-between">
             <span className="text-[10px] text-dash-text-muted">Active operational modules:</span>
             <div className="flex gap-1">
-              {clientConfig.operational_modules.direct_bookings && <span title="Direct Bookings" className="w-2 h-2 rounded-full bg-emerald-500" />}
-              {clientConfig.operational_modules.housekeeping && <span title="Housekeeping" className="w-2 h-2 rounded-full bg-blue-500" />}
-              {clientConfig.operational_modules.room_service && <span title="Room Service F&B" className="w-2 h-2 rounded-full bg-amber-500" />}
-              {clientConfig.operational_modules.maintenance && <span title="Maintenance" className="w-2 h-2 rounded-full bg-purple-500" />}
-              {clientConfig.operational_modules.upsells && <span title="Upsells & Monetization" className="w-2 h-2 rounded-full bg-[#EA6639]" />}
+            {clientConfig?.operational_modules?.direct_bookings && <span title="Direct Bookings" className="w-2 h-2 rounded-full bg-emerald-500" />}
+              {clientConfig?.operational_modules?.housekeeping && <span title="Housekeeping" className="w-2 h-2 rounded-full bg-blue-500" />}
+              {clientConfig?.operational_modules?.room_service && <span title="Room Service F&B" className="w-2 h-2 rounded-full bg-amber-500" />}
+              {clientConfig?.operational_modules?.maintenance && <span title="Maintenance" className="w-2 h-2 rounded-full bg-purple-500" />}
+              {clientConfig?.operational_modules?.upsells && <span title="Upsells & Monetization" className="w-2 h-2 rounded-full bg-[#EA6639]" />}
             </div>
           </div>
         </div>
@@ -450,10 +401,10 @@ export function BillingTab() {
             <div className="p-2.5 bg-dash-canvas/80 rounded-lg border border-dash-border text-[11px] font-mono space-y-1 text-dash-text">
               <div className="flex justify-between items-center text-dash-text-sec">
                 <span>Base Platform Fee:</span>
-                <span>{formatMoney(clientConfig.base_platform_fee)}</span>
+                <span>{formatMoney(clientConfig?.base_platform_fee ?? 0)}</span>
               </div>
               <div className="flex justify-between items-center text-[#EA6639] font-medium">
-                <span>Attributed Dividend ({(clientConfig.attribution_rate * 100).toFixed(1)}%):</span>
+                <span>Attributed Dividend ({((clientConfig?.attribution_rate ?? 0) * 100).toFixed(1)}%):</span>
                 <span>+{formatMoney(qualifyingStreams.totalPerformanceFee)}</span>
               </div>
               <div className="flex justify-between items-center text-dash-text-sec">
@@ -531,7 +482,7 @@ export function BillingTab() {
           </div>
           <div className="flex items-center gap-3 self-end sm:self-auto text-xs text-dash-text-muted">
             <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#EA6639]" /> {(clientConfig.attribution_rate * 100).toFixed(1)}% Dividend
+              <span className="w-2.5 h-2.5 rounded-full bg-[#EA6639]" /> {((clientConfig?.attribution_rate ?? 0) * 100).toFixed(1)}% Dividend
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> 20% OTA Saved
@@ -547,14 +498,14 @@ export function BillingTab() {
                 <th className="p-3 text-[10px] font-semibold text-dash-text-muted uppercase tracking-wider">Autonomous Trigger</th>
                 <th className="p-3 text-[10px] font-semibold text-dash-text-muted uppercase tracking-wider text-right">Transactions</th>
                 <th className="p-3 text-[10px] font-semibold text-dash-text-muted uppercase tracking-wider text-right">Gross Facilitated</th>
-                <th className="p-3 text-[10px] font-semibold text-dash-text-muted uppercase tracking-wider text-right">Ever Fee ({(clientConfig.attribution_rate * 100).toFixed(1)}%)</th>
+                <th className="p-3 text-[10px] font-semibold text-dash-text-muted uppercase tracking-wider text-right">Ever Fee ({clientConfig ? (clientConfig.attribution_rate * 100).toFixed(1) : "0.0"}%)</th>
                 <th className="p-3 text-[10px] font-semibold text-dash-text-muted uppercase tracking-wider text-right">OTA Retained</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dash-border">
               {qualifyingStreams.streams.map((stream) => {
                 const StreamIcon = stream.icon;
-                const feeForStream = stream.gross * clientConfig.attribution_rate;
+                const feeForStream = stream.gross * (clientConfig?.attribution_rate ?? 0);
                 return (
                   <tr key={stream.id} className="hover:bg-dash-canvas/40 transition-colors">
                     <td className="p-3">
@@ -582,15 +533,23 @@ export function BillingTab() {
               })}
             </tbody>
             <tfoot>
-              <tr className="bg-dash-canvas/80 border-t-2 border-dash-border font-bold">
-                <td className="p-3 text-dash-text" colSpan={2}>
-                  Total Qualifying Commercial Portfolio ({qualifyingStreams.streams.length} Streams)
-                </td>
-                <td className="p-3 text-right font-mono text-dash-text">{qualifyingStreams.totalTransactions}</td>
-                <td className="p-3 text-right font-mono text-dash-text">{formatMoney(qualifyingStreams.totalGross)}</td>
-                <td className="p-3 text-right font-mono text-[#EA6639]">{formatMoney(qualifyingStreams.totalPerformanceFee)}</td>
-                <td className="p-3 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(qualifyingStreams.totalOtaSaved)}</td>
-              </tr>
+              {qualifyingStreams.streams.length === 0 && !isSandbox ? (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center text-dash-text-muted text-xs">
+                    No qualifying guest transactions recorded. Ledger will track real-time bookings once your channel integration is live.
+                  </td>
+                </tr>
+              ) : (
+                <tr className="bg-dash-canvas/80 border-t-2 border-dash-border font-bold">
+                  <td className="p-3 text-dash-text" colSpan={2}>
+                    Total Qualifying Commercial Portfolio ({qualifyingStreams.streams.length} Streams)
+                  </td>
+                  <td className="p-3 text-right font-mono text-dash-text">{qualifyingStreams.totalTransactions}</td>
+                  <td className="p-3 text-right font-mono text-dash-text">{formatMoney(qualifyingStreams.totalGross)}</td>
+                  <td className="p-3 text-right font-mono text-[#EA6639]">{formatMoney(qualifyingStreams.totalPerformanceFee)}</td>
+                  <td className="p-3 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(qualifyingStreams.totalOtaSaved)}</td>
+                </tr>
+              )}
             </tfoot>
           </table>
         </div>
@@ -629,18 +588,26 @@ export function BillingTab() {
             </div>
 
             <div className="p-3 bg-dash-canvas rounded-lg border border-dash-border space-y-2 text-[11px]">
-              <div className="flex justify-between text-dash-text-sec">
-                <span>Autonomous Guest Inquiries Handled:</span>
-                <span className="font-mono font-semibold text-dash-text">8,420 interactions</span>
-              </div>
-              <div className="flex justify-between text-dash-text-sec">
-                <span>Front-Desk Hours Saved:</span>
-                <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">~63.1 Hours</span>
-              </div>
-              <div className="flex justify-between text-dash-text-sec">
-                <span>Operational Tasks Auto-Dispatched:</span>
-                <span className="font-mono font-semibold text-dash-text">184 work orders</span>
-              </div>
+              {isSandbox ? (
+                <>
+                  <div className="flex justify-between text-dash-text-sec">
+                    <span>Autonomous Guest Inquiries Handled:</span>
+                    <span className="font-mono font-semibold text-dash-text">8,420 interactions</span>
+                  </div>
+                  <div className="flex justify-between text-dash-text-sec">
+                    <span>Front-Desk Hours Saved:</span>
+                    <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">~63.1 Hours</span>
+                  </div>
+                  <div className="flex justify-between text-dash-text-sec">
+                    <span>Operational Tasks Auto-Dispatched:</span>
+                    <span className="font-mono font-semibold text-dash-text">184 work orders</span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-3 text-dash-text-muted">
+                  <p className="text-[11px]">Usage metrics will appear once your channel integration is live.</p>
+                </div>
+              )}
             </div>
 
             <button 
@@ -675,7 +642,13 @@ export function BillingTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-dash-border">
-                {invoices.map((inv) => (
+                {invoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-dash-text-muted text-xs">
+                      No billing cycles completed yet. Invoices are generated at the end of each monthly period.
+                    </td>
+                  </tr>
+                ) : invoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-dash-canvas/50 transition-colors">
                     <td className="p-2.5 font-mono font-medium text-dash-text">{inv.id}</td>
                     <td className="p-2.5 text-dash-text-sec text-[11px]">{inv.period}</td>
@@ -689,7 +662,7 @@ export function BillingTab() {
                       </span>
                     </td>
                     <td className="p-2.5 text-right">
-                      <button 
+                      <button
                         onClick={() => handleDownloadInvoice(inv.id)}
                         className="text-dash-text-muted hover:text-[#EA6639] transition-colors p-1"
                         title="Download PDF"
@@ -722,7 +695,7 @@ export function BillingTab() {
             <form onSubmit={handleUpdatePayment} className="p-5 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-dash-text mb-1.5">Company / Hotel Legal Name</label>
-                <input required defaultValue={clientConfig.name} type="text" className="w-full px-3 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs text-dash-text focus:ring-1 focus:ring-[#EA6639] focus:outline-none" />
+                <input required defaultValue={clientConfig?.name || ""} type="text" className="w-full px-3 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs text-dash-text focus:ring-1 focus:ring-[#EA6639] focus:outline-none" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-dash-text mb-1.5">Card Number</label>

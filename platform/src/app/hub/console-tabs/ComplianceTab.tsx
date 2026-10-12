@@ -11,7 +11,7 @@ export function ComplianceTab() {
   const { showToast } = useToast();
 
   const [consentMode, setConsentMode] = useState(true);
-  const [privacyUrl, setPrivacyUrl] = useState("https://hotel.com/privacy");
+  const [privacyUrl, setPrivacyUrl] = useState(() => isSandbox ? "https://hotel.com/privacy" : "");
   const [disclosureText, setDisclosureText] = useState("Hi! I'm your digital concierge. Before we begin, please note that we process your data in accordance with our Privacy Policy.");
   
   const [dpaRecord, setDpaRecord] = useState<any>(null);
@@ -132,6 +132,7 @@ export function ComplianceTab() {
                 <input 
                   type="url" 
                   value={privacyUrl} 
+                  placeholder="https://yourhotel.com/privacy"
                   onChange={e => setPrivacyUrl(e.target.value)} 
                   className="w-full px-3 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#EA6639] text-dash-text" 
                 />

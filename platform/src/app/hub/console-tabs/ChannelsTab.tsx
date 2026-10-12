@@ -84,7 +84,7 @@ export function ChannelsTab({ role }: { role?: string }) {
     role === "hotel_readonly" ||
     (role || "").toLowerCase().includes("readonly");
 
-  const [hotelName, setHotelName] = useState<string>("Grand Horizon Resort");
+  const [hotelName, setHotelName] = useState<string>(() => user?.user_metadata?.hotel_name || user?.user_metadata?.property_name || "");
   const [loading, setLoading] = useState(false);
   const [copiedWidget, setCopiedWidget] = useState(false);
   const [testingChannel, setTestingChannel] = useState<string | null>(null);
@@ -269,7 +269,7 @@ export function ChannelsTab({ role }: { role?: string }) {
         .single();
 
       if (!hotelErr && hotelData) {
-        const resolvedName = hotelData.name || (user?.email?.toLowerCase() === "dero@ever.com" ? "Dero Apartments & Resorts" : "Grand Horizon Resort");
+        const resolvedName = hotelData.name || user?.user_metadata?.hotel_name || user?.user_metadata?.property_name || (user?.email?.toLowerCase() === "dero@ever.com" ? "Dero Apartments & Resorts" : "My Hotel");
         setHotelName(resolvedName);
 
         const channelsConfig = hotelData.config?.channels || {};

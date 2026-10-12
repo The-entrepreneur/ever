@@ -57,7 +57,7 @@ export function SetupWizardModal({ isOpen, onClose, onComplete, hotelData }: Set
 
   // Step 2: Connect Channel
   const [selectedChannel, setSelectedChannel] = useState<"widget" | "whatsapp" | "skip">("widget");
-  const [waPhone, setWaPhone] = useState("+1 (555) 382-9102");
+  const [waPhone, setWaPhone] = useState("");
   const [waPhoneId, setWaPhoneId] = useState("");
 
   // Step 3: Handoff Alerts

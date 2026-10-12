@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Search, 
   Filter, 
@@ -138,8 +138,27 @@ const INITIAL_CLIENTS: ClientRecord[] = [
 
 export function ClientManagementTab() {
   const { showToast } = useToast();
-  const [clients, setClients] = useState<ClientRecord[]>(INITIAL_CLIENTS);
+  const [clients, setClients] = useState<ClientRecord[]>(() => {
+    try {
+      const stored = localStorage.getItem("ever_admin_clients");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Failed to parse ever_admin_clients", e);
+    }
+    return INITIAL_CLIENTS;
+  });
   const [invites, setInvites] = useState<OnboardingInvite[]>(() => getAllInvites());
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("ever_admin_clients", JSON.stringify(clients));
+    } catch (e) {
+      console.warn("Failed to persist ever_admin_clients", e);
+    }
+  }, [clients]);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");

@@ -32,6 +32,11 @@ This skill is responsible for enforcing best practices and established patterns 
    - Review every change against previous sprint knowledge to prevent regressions.
    - Keep up to date with the latest security standards.
 
+5. **Sandbox & Production Separation (Zero Mock Data Leakage)**
+   - Strictly enforce the boundary between Sandbox demo mode (`isSandbox === true`) and Live Production mode (`isSandbox === false`).
+   - Synthetic mock data, hardcoded sample metrics, and seeded records must NEVER leak into live accounts.
+   - Production accounts must strictly render authentic database records and clean, professional zero-states.
+
 ## Agent Instructions
 
 When this skill is active, you MUST:
