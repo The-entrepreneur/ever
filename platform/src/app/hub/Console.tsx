@@ -572,8 +572,13 @@ export function Console() {
             </button>
             
             <span className="font-semibold text-dash-text flex items-center gap-1.5">
-              {propertyProfile.propertyName}
+              {propertyProfile.propertyName || (isSandbox ? "Dero Apartments & Resorts" : "My Property")}
             </span>
+            {isSandbox && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 tracking-wide uppercase">
+                Sandbox Demo
+              </span>
+            )}
             <span className="text-dash-text-sec">/</span>
             <span className="flex items-center gap-1.5 text-dash-text-sec hover:bg-dash-surface-hover px-2 py-1 rounded cursor-pointer transition-colors">
               User Panel
