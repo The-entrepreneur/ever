@@ -6,6 +6,7 @@
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Analytics } from "@vercel/analytics/react";
 import { ThemeProvider, useTheme } from "./shared/ThemeProvider";
 import { CurrencyProvider } from "./context/CurrencyContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -193,6 +194,7 @@ export default function App() {
                 <AppLayout />
               </BrowserRouter>
               <SpeedInsights />
+              <Analytics />
             </ToastProvider>
           </SandboxDataProvider>
         </AuthProvider>
