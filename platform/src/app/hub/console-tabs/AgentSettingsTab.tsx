@@ -50,12 +50,10 @@ export function AgentSettingsTab({ role }: { role?: string }) {
     (role || "").toLowerCase().includes("readonly");
 
   // ── General Configuration ──────────────────────────────────────────────────
-  const [agentName, setAgentName] = useState("Ever AI Concierge");
+  const [agentName, setAgentName] = useState("");
   const [agentTone, setAgentTone] = useState<"Formal" | "Friendly" | "Playful" | "Conversational">("Friendly");
   const [languagePriority, setLanguagePriority] = useState("Auto-detect");
-  const [welcomeMessage, setWelcomeMessage] = useState(
-    "Welcome to our property! I'm your digital concierge. How can I assist your stay today?"
-  );
+  const [welcomeMessage, setWelcomeMessage] = useState("");
   const [privacyNoticeUrl, setPrivacyNoticeUrl] = useState("");
   const [bookingUrl, setBookingUrl] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -64,13 +62,11 @@ export function AgentSettingsTab({ role }: { role?: string }) {
   const [humanOnlyMode, setHumanOnlyMode] = useState(false);
   const [startTime, setStartTime] = useState("00:00");
   const [endTime, setEndTime] = useState("23:59");
-  const [outOfHoursMessage, setOutOfHoursMessage] = useState(
-    "Our digital concierge is currently offline. For urgent assistance, please contact the front desk directly."
-  );
+  const [outOfHoursMessage, setOutOfHoursMessage] = useState("");
   const [handoffTriggers, setHandoffTriggers] = useState<string[]>(DEFAULT_HANDOFF_TRIGGERS);
   const [newTriggerInput, setNewTriggerInput] = useState("");
   const [handoffAlertMethod, setHandoffAlertMethod] = useState<"email" | "whatsapp" | "both">("both");
-  const [repEmail, setRepEmail] = useState(user?.email || "");
+  const [repEmail, setRepEmail] = useState("");
   const [secondaryAlertEmail, setSecondaryAlertEmail] = useState("");
   const [consentCaptureMode, setConsentCaptureMode] = useState(true);
   const [leadQualityThreshold, setLeadQualityThreshold] = useState(3);

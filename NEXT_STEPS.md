@@ -20,12 +20,17 @@ This document tracks the upcoming phases and actionable next steps for the EVER 
 - [ ] Verify isolated client container deployment, ensuring each hotel gets its own dedicated environment (n8n, bot-engine, pms-api, redis).
 - [ ] Confirm proper generation of `.env` files for newly created client directories.
 
-### Phase 4: Dynamic Knowledge Integration (Future)
-- [ ] Transition from manual FAQ management (Google Sheets) to a dynamic data integration model.
-- [ ] Implement connectors for third-party platforms and custom APIs to ingest client data directly.
-- [ ] Enable the LLM to leverage a 'live' knowledge base to eliminate manual updates and ensure real-time consistency.
+### Phase 4: Dynamic Knowledge Integration & Production Hardening
+- [ ] Deploy Migration 014 to production Supabase project (`014_guest_360_memory_and_pgvector.sql`).
+- [ ] Connect production n8n workflows directly to Supabase REST endpoints for hotels, rooms, and faqs (sever Google Sheets nodes).
+- [ ] Run OpenAI embedding generation script on existing production `public.faqs` rows.
+- [ ] Validate live tool calling with Groq / LLaMA 3.3 function calling mode.
 
 ## [Completed]
+- [x] GUEST 360 MEMORY data architecture (`public.guests`, `lookup_guest_360`, `upsert_guest_360` in Migration 014).
+- [x] pgvector Semantic RAG Knowledge Base Engine (`match_faqs`, 1536-dim HNSW cosine distance index in Migration 014 and `rag.js`).
+- [x] Canonical Hospitality Tool Calling Specification (`definitions.js`, `executor.js`, and bot-engine `/api/tools/execute`).
+- [x] Console CRM GUEST 360 MEMORY Suite (`CRMTab.tsx` telemetry card and `SandboxDataContext.tsx` enriched profile generator).
 - [x] Webhook Gateway Decoupling & N8n Execution Memory Protection implemented.
 - [x] Naming conventions updated to `.gce` and `.hca`.
 - [x] Tier migration database schema (`subscriptions`) prepared.

@@ -7,6 +7,12 @@ export interface SandboxLead {
   created_at: string; status: string; lead_quality: number;
   check_in?: string; check_out?: string; guests?: number;
   purpose?: string; channel?: string;
+  vip_tier?: "standard" | "silver" | "gold" | "vip" | "black";
+  stay_count?: number;
+  total_spend?: number;
+  room_preferences?: string[];
+  dietary_preferences?: string[];
+  special_notes?: string;
 }
 
 export interface SandboxBooking {
@@ -124,6 +130,10 @@ export interface SandboxFeedback {
 export interface SandboxStaff {
   id: string; full_name: string | null; email: string; role: string;
   status: string; receive_handoff_alerts: boolean; last_login?: string | null; created_at?: string;
+  department?: "front_desk" | "concierge" | "housekeeping" | "maintenance" | "fnb" | "management";
+  shift?: "morning" | "afternoon" | "night" | "flexible";
+  duty_status?: "on_duty" | "off_duty" | "break";
+  mobile_number?: string;
 }
 
 export interface SandboxChannelAccount {
@@ -385,6 +395,34 @@ function generateSandboxData(hotelId: string, hotelName: string = "Dero Apartmen
     const fName = sample(FIRST_NAMES);
     const lName = sample(LAST_NAMES);
     const checkInDate = new Date(now.getTime() + rInt(1, 60) * 86400000);
+    const stays = rInt(1, 7);
+    const vip: "standard" | "silver" | "gold" | "vip" | "black" = 
+      stays >= 6 ? "vip" : stays >= 4 ? "gold" : stays >= 2 ? "silver" : "standard";
+    const roomPrefs = sample([
+      ["High Floor", "Quiet Room"],
+      ["Near Elevator", "Feather-free Pillows"],
+      ["Ocean View Guarantee", "King Bed"],
+      ["Late Checkout Preference", "Extra Towels"],
+      ["Ground Floor", "Accessible Access"],
+      []
+    ]);
+    const dietPrefs = sample([
+      ["Vegetarian"],
+      ["Gluten-free"],
+      ["Nut Allergy"],
+      ["No Shellfish", "Dairy-free"],
+      ["Halal Only"],
+      []
+    ]);
+    const notes = sample([
+      "Prefers evening turndown service with chamomile tea.",
+      "Celebrates wedding anniversary every October; VIP wine arrangement.",
+      "Corporate frequent flyer; always requests digital folio receipts.",
+      "Prefers rooms situated far from the ice machine.",
+      "Sensitive to feathers; strictly synthetic microfiber pillows only.",
+      undefined
+    ]);
+
     return {
       id: uid(),
       name: `${fName} ${lName}`,
@@ -398,6 +436,12 @@ function generateSandboxData(hotelId: string, hotelName: string = "Dero Apartmen
       guests: rInt(1, 4),
       purpose: sample(PURPOSES),
       channel: sample(CHANNELS),
+      vip_tier: vip,
+      stay_count: stays,
+      total_spend: stays * rInt(180, 520),
+      room_preferences: roomPrefs,
+      dietary_preferences: dietPrefs,
+      special_notes: notes,
     };
   });
 
@@ -640,10 +684,10 @@ function generateSandboxData(hotelId: string, hotelName: string = "Dero Apartmen
 
   // ── 10. Staff Roster (4) ──────────────────────────────────────────────────
   const staff: SandboxStaff[] = [
-    { id: uid(), full_name: "Alex Mercer", email: "alex@ever.com", role: "hotel_manager", status: "active", receive_handoff_alerts: true, last_login: new Date().toISOString(), created_at: rDate(120) },
-    { id: uid(), full_name: "Elena Rostova", email: "elena.r@ever.com", role: "hotel_receptionist", status: "active", receive_handoff_alerts: true, last_login: rDate(1), created_at: rDate(90) },
-    { id: uid(), full_name: "Carlos Mendez", email: "carlos.m@ever.com", role: "hotel_receptionist", status: "active", receive_handoff_alerts: true, last_login: rDate(2), created_at: rDate(60) },
-    { id: uid(), full_name: "Sarah Jenkins", email: "sarah.j@ever.com", role: "hotel_readonly", status: "active", receive_handoff_alerts: false, last_login: rDate(5), created_at: rDate(45) },
+    { id: uid(), full_name: "Alex Mercer", email: "alex@ever.com", role: "hotel_manager", status: "active", receive_handoff_alerts: true, last_login: new Date().toISOString(), created_at: rDate(120), department: "management", shift: "flexible", duty_status: "on_duty", mobile_number: "+1 (555) 234-8901" },
+    { id: uid(), full_name: "Elena Rostova", email: "elena.r@ever.com", role: "hotel_receptionist", status: "active", receive_handoff_alerts: true, last_login: rDate(1), created_at: rDate(90), department: "front_desk", shift: "morning", duty_status: "on_duty", mobile_number: "+1 (555) 345-6789" },
+    { id: uid(), full_name: "Carlos Mendez", email: "carlos.m@ever.com", role: "hotel_receptionist", status: "active", receive_handoff_alerts: true, last_login: rDate(2), created_at: rDate(60), department: "concierge", shift: "afternoon", duty_status: "break", mobile_number: "+1 (555) 456-7890" },
+    { id: uid(), full_name: "Sarah Jenkins", email: "sarah.j@ever.com", role: "hotel_readonly", status: "active", receive_handoff_alerts: false, last_login: rDate(5), created_at: rDate(45), department: "fnb", shift: "flexible", duty_status: "off_duty", mobile_number: "+1 (555) 567-8901" },
   ];
 
   // ── 11. Channels (All 5 channels supported per Screen 7) ───────────────────

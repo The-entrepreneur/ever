@@ -201,6 +201,107 @@ app.post('/lead', async (req, res) => {
 });
 
 
+// ── GUEST 360 MEMORY Endpoints ──────────────────────────────
+app.get('/api/guest360/lookup', async (req, res) => {
+  try {
+    const { hotel_id, hotel_slug, identifier } = req.query;
+    const tracker = require('./services/tracker');
+    const resolvedHotelId = hotel_id || (hotel_slug ? await tracker.resolveHotelId(hotel_slug) : null);
+    if (!resolvedHotelId || !identifier) {
+      return res.status(400).json({ error: 'hotel_id (or hotel_slug) and identifier are required' });
+    }
+
+    const guest360 = require('./services/guest360');
+    const guest = await guest360.lookupGuest360(resolvedHotelId, identifier);
+    return res.json({
+      success: true,
+      found: !!guest,
+      guest: guest || null,
+      context_block: guest360.formatGuest360Context(guest)
+    });
+  } catch (err) {
+    console.error('[BotEngine] Guest 360 lookup error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/guest360/observe', async (req, res) => {
+  try {
+    const { hotel_id, hotel_slug, full_name, email, phone, room_preference, dietary_preference, special_notes, channel } = req.body;
+    const tracker = require('./services/tracker');
+    const resolvedHotelId = hotel_id || (hotel_slug ? await tracker.resolveHotelId(hotel_slug) : null);
+    if (!resolvedHotelId || !full_name) {
+      return res.status(400).json({ error: 'hotel_id (or hotel_slug) and full_name are required' });
+    }
+
+    const guest360 = require('./services/guest360');
+    const guestId = await guest360.upsertGuestProfile(resolvedHotelId, {
+      fullName: full_name,
+      email,
+      phone,
+      roomPreference: room_preference,
+      dietaryPreference: dietary_preference,
+      specialNotes: special_notes,
+      channel
+    });
+    return res.json({ success: true, guest_id: guestId });
+  } catch (err) {
+    console.error('[BotEngine] Guest 360 observe error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ── RAG Knowledge Base Retrieval Endpoint ────────────────────
+app.post('/api/rag/search', async (req, res) => {
+  try {
+    const { hotel_id, hotel_slug, query, limit = 3, threshold = 0.60 } = req.body;
+    const tracker = require('./services/tracker');
+    const resolvedHotelId = hotel_id || (hotel_slug ? await tracker.resolveHotelId(hotel_slug) : null);
+    if (!resolvedHotelId || !query) {
+      return res.status(400).json({ error: 'hotel_id (or hotel_slug) and query are required' });
+    }
+
+    const rag = require('./services/rag');
+    const matches = await rag.searchKnowledgeBase(resolvedHotelId, query, { limit, threshold });
+    return res.json({
+      success: true,
+      matches_count: matches.length,
+      matches,
+      context_block: rag.formatKnowledgeContext(matches)
+    });
+  } catch (err) {
+    console.error('[BotEngine] RAG search error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Canonical Hospitality Tool Execution Endpoints ───────────
+app.get('/api/tools/definitions', (req, res) => {
+  const { HOSPITALITY_TOOLS } = require('./tools/definitions');
+  return res.json({ tools: HOSPITALITY_TOOLS });
+});
+
+app.post('/api/tools/execute', async (req, res) => {
+  try {
+    const { tool_name, arguments: toolArgs, context = {} } = req.body;
+    if (!tool_name) {
+      return res.status(400).json({ error: 'tool_name is required' });
+    }
+
+    const tracker = require('./services/tracker');
+    if (!context.hotelId && context.hotelSlug) {
+      context.hotelId = await tracker.resolveHotelId(context.hotelSlug);
+    }
+
+    const { executeTool } = require('./tools/executor');
+    const result = await executeTool(tool_name, toolArgs || {}, context);
+    return res.json(result);
+  } catch (err) {
+    console.error('[BotEngine] Tool execute error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Start server ─────────────────────────────────────────────
 const PORT = process.env.BOT_ENGINE_PORT || 3001;
 app.listen(PORT, () => {
