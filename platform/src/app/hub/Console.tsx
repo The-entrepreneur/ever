@@ -27,7 +27,11 @@ import {
   CreditCard,
   Bell,
   Sparkles,
-  Check
+  Check,
+  Headphones,
+  Search,
+  Command,
+  Keyboard
 } from "lucide-react";
 import { useTheme } from "../../shared/ThemeProvider";
 import { supabase } from "../../lib/supabase";
@@ -35,6 +39,10 @@ import { useAuth } from "../../context/AuthContext";
 import { useSandbox } from "../../context/SandboxDataContext";
 import { useToast } from "../../shared/ToastContext";
 import { SetupWizardModal } from "./SetupWizardModal";
+import { NotificationDrawer } from "./NotificationDrawer";
+import { SupportTicketModal } from "./SupportTicketModal";
+import { CommandPalette } from "./CommandPalette";
+import { ShortcutsHelpModal } from "./ShortcutsHelpModal";
 import { DashboardTab } from "./console-tabs/DashboardTab";
 import { InboxTab } from "./console-tabs/InboxTab";
 import { CRMTab } from "./console-tabs/CRMTab";
@@ -79,6 +87,11 @@ export function Console() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
   const handleNavigate = (tab: string, context?: any) => {
@@ -186,6 +199,134 @@ export function Console() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Global Keyboard Shortcuts & Navigation Sequences
+  useEffect(() => {
+    let pendingG = false;
+    let pendingGTimeout: any = null;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Mod+K (Ctrl+K or Cmd+K) triggers Command Palette anywhere
+      if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+        return;
+      }
+
+      // 2. Escape closes active modals/drawers in order
+      if (e.key === "Escape") {
+        if (isShortcutsHelpOpen) {
+          setIsShortcutsHelpOpen(false);
+          return;
+        }
+        if (isCommandPaletteOpen) {
+          setIsCommandPaletteOpen(false);
+          return;
+        }
+        if (isSupportModalOpen) {
+          setIsSupportModalOpen(false);
+          return;
+        }
+        if (isNotificationDrawerOpen) {
+          setIsNotificationDrawerOpen(false);
+          return;
+        }
+        if (isMobileSidebarOpen) {
+          setIsMobileSidebarOpen(false);
+          return;
+        }
+        if (isProfileOpen) {
+          setIsProfileOpen(false);
+          return;
+        }
+        if (isProfileModalOpen) {
+          setIsProfileModalOpen(false);
+          return;
+        }
+        if (isPasswordModalOpen) {
+          setIsPasswordModalOpen(false);
+          return;
+        }
+        return;
+      }
+
+      // Don't trigger shortcuts if user is typing in form inputs, textareas, or contentEditable
+      const target = e.target as HTMLElement;
+      if (
+        target && 
+        (target.tagName === "INPUT" || 
+         target.tagName === "TEXTAREA" || 
+         target.tagName === "SELECT" || 
+         target.isContentEditable)
+      ) {
+        return;
+      }
+
+      // 3. Question mark '?' opens Shortcuts Help Modal
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        setIsShortcutsHelpOpen(prev => !prev);
+        return;
+      }
+
+      // 4. 't' or 'T' toggles theme
+      if ((e.key === "t" || e.key === "T") && !e.ctrlKey && !e.metaKey && !e.altKey && !pendingG) {
+        e.preventDefault();
+        setTheme(theme === "dark" ? "light" : "dark");
+        return;
+      }
+
+      // 5. 'g' then letter navigation sequences
+      if ((e.key === "g" || e.key === "G") && !pendingG) {
+        pendingG = true;
+        clearTimeout(pendingGTimeout);
+        pendingGTimeout = setTimeout(() => {
+          pendingG = false;
+        }, 1200);
+        return;
+      }
+
+      if (pendingG) {
+        pendingG = false;
+        clearTimeout(pendingGTimeout);
+        const k = e.key.toLowerCase();
+        const tabMap: Record<string, string> = {
+          d: "dashboard",
+          i: "inbox",
+          c: "crm",
+          b: "bookings",
+          a: "analytics",
+          f: "feedback",
+          s: "staff",
+          k: "knowledge_base",
+          p: "compliance",
+          r: "billing"
+        };
+        const targetTab = tabMap[k];
+        if (targetTab && isTabAllowed(targetTab)) {
+          e.preventDefault();
+          setActiveTab(targetTab as any);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      clearTimeout(pendingGTimeout);
+    };
+  }, [
+    isShortcutsHelpOpen,
+    isCommandPaletteOpen,
+    isSupportModalOpen,
+    isNotificationDrawerOpen,
+    isMobileSidebarOpen,
+    isProfileOpen,
+    isProfileModalOpen,
+    isPasswordModalOpen,
+    theme,
+    setTheme
+  ]);
 
   const [seeding, setSeeding] = useState(false);
 
@@ -428,13 +569,51 @@ export function Console() {
               <div className="space-y-2">
                 <button
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent('open-ellie-chat'));
+                    setIsSupportModalOpen(true);
                     setIsMobileSidebarOpen(false);
                   }}
-                  className="w-full rounded-md flex items-center gap-3 h-[36px] px-3 py-1.5 transition-colors dashboard-btn compact-touch-target text-dash-text-sec hover:bg-dash-surface-hover/50 hover:text-dash-text"
+                  className="w-full rounded-md flex items-center gap-3 h-[42px] px-3 py-2 transition-colors dashboard-btn compact-touch-target text-dash-text-sec hover:bg-dash-surface-hover/50 hover:text-dash-text"
                 >
-                  <HelpCircle className="w-5 h-5 shrink-0 text-dash-green" />
-                  <span className="text-body font-medium truncate">Chat with Ellie</span>
+                  <Headphones className="w-5 h-5 shrink-0 text-[#EA6639]" />
+                  <span className="text-body font-medium truncate">Support Desk</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Footer: Theme, Shortcuts & Command Palette */}
+            <div className="mt-auto pt-4 border-t border-dash-border space-y-2 shrink-0">
+              <div className="flex items-center justify-between px-1 py-1">
+                <span className="text-xs text-dash-text-sec font-medium">Appearance</span>
+                <button
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="px-2.5 py-1 text-xs rounded-md bg-dash-surface border border-dash-border flex items-center gap-1.5 text-dash-text hover:bg-dash-surface-hover transition-colors"
+                >
+                  {theme === "dark" ? <Sun className="w-3.5 h-3.5 text-amber-500" /> : <Moon className="w-3.5 h-3.5 text-indigo-400" />}
+                  <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={() => {
+                    setIsMobileSidebarOpen(false);
+                    setIsCommandPaletteOpen(true);
+                  }}
+                  className="flex-1 py-1.5 px-2 bg-dash-surface border border-dash-border rounded-lg text-xs text-dash-text-sec hover:text-dash-text flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Commands</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsMobileSidebarOpen(false);
+                    setIsShortcutsHelpOpen(true);
+                  }}
+                  className="py-1.5 px-2.5 bg-dash-surface border border-dash-border rounded-lg text-xs text-dash-text-sec hover:text-dash-text flex items-center justify-center gap-1 transition-colors"
+                  title="Keyboard shortcuts"
+                >
+                  <Keyboard className="w-3.5 h-3.5" />
+                  <span>?</span>
                 </button>
               </div>
             </div>
@@ -533,12 +712,12 @@ export function Console() {
           <div className="px-3 mb-2 mt-auto">
             {isSidebarExpanded && <div className="px-3 mb-2"><span className="text-micro font-bold text-dash-text-muted uppercase tracking-wider">Support</span></div>}
             <button 
-              onClick={() => window.dispatchEvent(new CustomEvent('open-ellie-chat'))}
-              title="Chat with Ellie"
+              onClick={() => setIsSupportModalOpen(true)}
+              title="Support & Engineering Desk"
               className={`w-full rounded-md flex items-center gap-3 h-[36px] px-3 py-1.5 transition-colors dashboard-btn compact-touch-target text-dash-text-sec hover:bg-dash-surface-hover hover:text-dash-text ${!isSidebarExpanded && "justify-center"}`}
             >
-              <HelpCircle className="w-5 h-5 shrink-0 text-[#EA6639]" />
-              {isSidebarExpanded && <span className="text-body font-medium truncate">Chat with Ellie</span>}
+              <Headphones className="w-5 h-5 shrink-0 text-[#EA6639]" />
+              {isSidebarExpanded && <span className="text-body font-medium truncate">Support Desk</span>}
             </button>
           </div>
         </div>
@@ -586,12 +765,42 @@ export function Console() {
             </span>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-4 text-xs shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 text-xs shrink-0">
+            {/* Quick Command Palette Launcher */}
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="hidden sm:flex items-center gap-2 px-2.5 py-1 text-xs text-dash-text-muted hover:text-dash-text bg-dash-canvas hover:bg-dash-surface-hover border border-dash-border hover:border-[#EA6639]/40 rounded-lg transition-all shadow-2xs group cursor-pointer"
+              title="Search or jump to tab (Ctrl+K / ⌘K)"
+            >
+              <Search className="w-3.5 h-3.5 text-dash-text-muted group-hover:text-[#EA6639] transition-colors" />
+              <span className="text-[11px] font-normal text-dash-text-sec">Search or jump to...</span>
+              <kbd className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-dash-surface border border-dash-border text-dash-text-muted shadow-2xs">
+                {typeof window !== "undefined" && navigator.platform?.toUpperCase().includes("MAC") ? "⌘K" : "Ctrl+K"}
+              </kbd>
+            </button>
+
+            {/* Mobile Quick Search Button */}
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="sm:hidden w-7 h-7 flex items-center justify-center rounded-md hover:bg-dash-surface-hover text-dash-text-sec hover:text-dash-text transition-colors"
+              title="Quick Search (Ctrl+K)"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
             <div className="flex items-center gap-1.5 ml-1">
-              <Link to="/help-desk" className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-dash-surface-hover text-dash-text-sec hover:text-dash-text transition-colors" title="Get Help">
-                <HelpCircle className="w-4 h-4" />
-              </Link>
-              
+              {/* Notification Centre Bell */}
+              <button 
+                onClick={() => setIsNotificationDrawerOpen(true)}
+                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-dash-surface-hover text-dash-text-sec hover:text-dash-text transition-colors relative"
+                title="Notification Centre"
+              >
+                <Bell className="w-4 h-4" />
+                {unreadNotifCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#EA6639] ring-2 ring-dash-surface animate-pulse" />
+                )}
+              </button>
+
               {/* Theme Toggle */}
               <button 
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")} 
@@ -710,7 +919,7 @@ export function Console() {
             />
           )}
           {activeTab === "analytics" && <AnalyticsTab onNavigate={handleNavigate as any} />}
-          {activeTab === "feedback" && <FeedbackTab />}
+          {activeTab === "feedback" && <FeedbackTab onNavigate={handleNavigate as any} />}
           {activeTab === "compliance" && <ComplianceTab />}
           {activeTab === "billing" && <BillingTab />}
         </div>
@@ -860,6 +1069,45 @@ export function Console() {
           loadProfile();
           showToast("Property onboarding complete! Your AI agent is ready.", "success");
         }}
+      />
+      {/* Global Notification Centre Slide-over Drawer */}
+      <NotificationDrawer
+        isOpen={isNotificationDrawerOpen}
+        onClose={() => setIsNotificationDrawerOpen(false)}
+        onNavigate={handleNavigate}
+        onUnreadCountChange={setUnreadNotifCount}
+      />
+      {/* Support & Engineering Desk Ticket Modal */}
+      <SupportTicketModal
+        isOpen={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
+      />
+
+      {/* Universal Command Palette & Tab Switcher (Ctrl+K / ⌘K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onSelectTab={(tabKey) => {
+          setActiveTab(tabKey as any);
+        }}
+        onOpenSupport={() => setIsSupportModalOpen(true)}
+        onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
+        onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
+        onToggleSandbox={() => {
+          localStorage.setItem("ever_sandbox_override", isSandbox ? "false" : "true");
+          window.location.reload();
+        }}
+        onOpenSetupWizard={() => setIsSetupWizardOpen(true)}
+        onOpenShortcutsHelp={() => setIsShortcutsHelpOpen(true)}
+        currentTheme={theme}
+        isSandbox={isSandbox}
+        allowedTabs={isTabAllowed}
+      />
+
+      {/* Global Keyboard Shortcuts Cheatsheet Modal */}
+      <ShortcutsHelpModal
+        isOpen={isShortcutsHelpOpen}
+        onClose={() => setIsShortcutsHelpOpen(false)}
       />
     </div>
   );

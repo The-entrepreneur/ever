@@ -26,6 +26,12 @@ interface Lead {
   purpose?: string | null;
   channel?: string | null;
   session_id?: string | null;
+  vip_tier?: "standard" | "silver" | "gold" | "vip" | "black";
+  stay_count?: number;
+  total_spend?: number;
+  room_preferences?: string[];
+  dietary_preferences?: string[];
+  special_notes?: string;
 }
 
 interface CRMTabProps {
@@ -775,6 +781,76 @@ export function CRMTab({ onNavigate, propertyName = "My Hotel", role = "hotel_ma
                   {selectedLead.guests ? `${selectedLead.guests} Guests` : "1–2 Guests"}
                 </p>
               </div>
+            </div>
+
+            {/* GUEST 360 MEMORY Card */}
+            <div className="p-3.5 rounded-xl border border-dash-border bg-dash-surface-raised space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#EA6639] animate-pulse" />
+                  <span className="text-[11px] uppercase tracking-wider font-bold text-dash-text">
+                    GUEST 360 MEMORY
+                  </span>
+                </div>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                  selectedLead.vip_tier === "vip" || selectedLead.vip_tier === "black"
+                    ? "bg-rose-500/15 text-rose-500 border border-rose-500/30"
+                    : selectedLead.vip_tier === "gold"
+                    ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
+                    : selectedLead.vip_tier === "silver"
+                    ? "bg-slate-400/15 text-slate-400 border border-slate-400/30"
+                    : "bg-dash-canvas text-dash-text-sec border border-dash-border"
+                }`}>
+                  {selectedLead.vip_tier ? `${selectedLead.vip_tier} Tier` : "Standard Tier"}
+                </span>
+              </div>
+
+              {/* Memory Telemetry */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2 rounded-lg bg-dash-canvas border border-dash-border-hairline">
+                  <span className="text-[10px] text-dash-text-muted block">Stay Count</span>
+                  <span className="text-sm font-bold text-dash-text">
+                    {selectedLead.stay_count || 1} stay{(selectedLead.stay_count || 1) > 1 ? "s" : ""}
+                  </span>
+                </div>
+                <div className="p-2 rounded-lg bg-dash-canvas border border-dash-border-hairline">
+                  <span className="text-[10px] text-dash-text-muted block">Lifetime Spend</span>
+                  <span className="text-sm font-bold text-[#EA6639]">
+                    ${(selectedLead.total_spend || (selectedLead.stay_count || 1) * 220).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Preferences */}
+              <div className="space-y-1.5 text-xs">
+                <span className="text-[10px] font-semibold text-dash-text-muted block">Observed Preferences:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedLead.room_preferences && selectedLead.room_preferences.length > 0 ? (
+                    selectedLead.room_preferences.map((pref, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[11px] font-medium border border-blue-500/20">
+                        🛏️ {pref}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[11px] text-dash-text-muted italic">No room preferences tagged</span>
+                  )}
+                  {selectedLead.dietary_preferences && selectedLead.dietary_preferences.length > 0 ? (
+                    selectedLead.dietary_preferences.map((diet, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-medium border border-emerald-500/20">
+                        🥗 {diet}
+                      </span>
+                    ))
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Special Notes */}
+              {selectedLead.special_notes && (
+                <div className="p-2 rounded-lg bg-dash-canvas border border-dash-border-hairline text-xs space-y-0.5">
+                  <span className="text-[10px] font-semibold text-dash-text-muted uppercase tracking-wider block">Concierge Notes:</span>
+                  <p className="text-dash-text italic text-[11px]">{selectedLead.special_notes}</p>
+                </div>
+              )}
             </div>
 
             {selectedLead.purpose && (

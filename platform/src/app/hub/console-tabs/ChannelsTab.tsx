@@ -120,19 +120,19 @@ export function ChannelsTab({ role }: { role?: string }) {
   });
 
   const [widgetConfig, setWidgetConfig] = useState<ChannelConfig>({
-    status: "connected",
-    display_name: "Website Live Widget",
+    status: "disconnected",
+    display_name: "",
     widget_color: "#EA6639",
     widget_position: "bottom-right",
-    widget_welcome: "Welcome! How can our concierge team assist your stay today?",
-    widget_show_badge: true,
+    widget_welcome: "",
+    widget_show_badge: false,
     widget_avatar_url: "",
-    last_tested_at: new Date().toISOString(),
+    last_tested_at: null,
   });
 
   const [tawkConfig, setTawkConfig] = useState<ChannelConfig>({
     status: "disconnected",
-    display_name: "Tawk.to Chat",
+    display_name: "",
     tawk_property_id: "",
     tawk_widget_id: "",
     tawk_api_key: "",

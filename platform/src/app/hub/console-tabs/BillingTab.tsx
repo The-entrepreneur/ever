@@ -171,33 +171,35 @@ export function BillingTab() {
         }
       }
 
-      // 3. Fallback to authenticated tenant profile metadata
+      // 3. Try user metadata for name/tier only — STRICT: no synthetic numeric defaults.
+      // If the admin has not yet configured commercial terms, clientConfig stays null.
       if (user?.user_metadata) {
         const meta = user.user_metadata;
-        const tier = (meta.tier as "select" | "estate" | "resort" | "portfolio") || "select";
-        const tierDefaults = {
-          select: { rooms: 20, base: 99, rate: 0.03, setup: 300 },
-          estate: { rooms: 36, base: 349, rate: 0.025, setup: 650 },
-          resort: { rooms: 75, base: 599, rate: 0.02, setup: 1200 },
-          portfolio: { rooms: 150, base: 1200, rate: 0.015, setup: 2500 },
-        }[tier] || { rooms: 20, base: 99, rate: 0.03, setup: 300 };
+        const tier = meta.tier as "select" | "estate" | "resort" | "portfolio" | undefined;
 
-        setClientConfig({
-          name: meta.business_name || meta.hotel_name || meta.property_name || "Active Property",
-          room_count: meta.room_count || tierDefaults.rooms,
-          estate_tier: tier,
-          base_platform_fee: meta.base_platform_fee ?? tierDefaults.base,
-          attribution_rate: meta.attribution_rate ?? tierDefaults.rate,
-          onboarding_fee: meta.onboarding_fee ?? tierDefaults.setup,
-          onboarding_status: meta.onboarding_status || "pending",
-          operational_modules: meta.operational_modules || {
-            direct_bookings: true,
-            housekeeping: true,
-            room_service: true,
-            maintenance: true,
-            upsells: true,
-          },
-        });
+        // Only construct config if we have explicitly stored numeric values — never invent them
+        if (
+          meta.base_platform_fee !== undefined &&
+          meta.attribution_rate !== undefined
+        ) {
+          setClientConfig({
+            name: meta.business_name || meta.hotel_name || meta.property_name || "",
+            room_count: meta.room_count ?? 0,
+            estate_tier: tier || "select",
+            base_platform_fee: meta.base_platform_fee,
+            attribution_rate: meta.attribution_rate,
+            onboarding_fee: meta.onboarding_fee ?? 0,
+            onboarding_status: meta.onboarding_status || "pending",
+            operational_modules: meta.operational_modules || {
+              direct_bookings: false,
+              housekeeping: false,
+              room_service: false,
+              maintenance: false,
+              upsells: false,
+            },
+          });
+        }
+        // else: clientConfig remains null → billing tab renders zero-state
       }
     } catch (e) {
       console.warn("Failed to load admin client commercial terms", e);
