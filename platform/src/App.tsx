@@ -99,18 +99,7 @@ function HomePage() {
   );
 }
 
-function UnfinishedPage() {
-  const { pathname } = useLocation();
-  const pageName = pathname.substring(1).split('-').join(' ').toUpperCase();
-  
-  return (
-    <main className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center bg-[#F9F6F0] dark:bg-[#121212]">
-      <div className="text-4xl mb-4">🚧</div>
-      <h1 className="text-3xl font-semibold mb-2 text-zinc-900 dark:text-white">{pageName || "PAGE"}</h1>
-      <p className="text-zinc-500 dark:text-zinc-400">This page is yet to be edited.</p>
-    </main>
-  );
-}
+import { NotFoundPage } from "./app/marketing/NotFoundPage";
 
 function AppLayout() {
   const location = useLocation();
@@ -171,7 +160,7 @@ function AppLayout() {
         } />
         <Route path="/demo" element={<InteractiveDemo />} />
         <Route path="/support-guide" element={<SupportGuide />} />
-        <Route path="*" element={<UnfinishedPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
       {!hideNavAndFooter && <Footer />}
       <AssistantWidget />

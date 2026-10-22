@@ -17,6 +17,7 @@ interface StaffMember {
   status: string;
   receive_handoff_alerts: boolean;
   last_login?: string | null;
+  online_status?: boolean | null;
   department?: DepartmentType | null;
   shift?: ShiftType | null;
   duty_status?: DutyStatusType | null;
@@ -93,7 +94,7 @@ export function StaffTab({ role }: { role?: string }) {
     try {
       const { data, error } = await supabase
         .from("users")
-        .select("id, full_name, email, role, status, receive_handoff_alerts, last_login, department, shift, duty_status, mobile_number")
+        .select("id, full_name, email, role, status, receive_handoff_alerts, last_login, online_status, department, shift, duty_status, mobile_number")
         .eq("hotel_id", hotelId)
         .order("created_at", { ascending: true });
 
@@ -609,15 +610,33 @@ export function StaffTab({ role }: { role?: string }) {
                       {/* Staff Member */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#EA6639]/10 border border-[#EA6639]/20 flex items-center justify-center text-[#EA6639] font-bold text-xs shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-[#EA6639]/10 border border-[#EA6639]/20 flex items-center justify-center text-[#EA6639] font-bold text-xs shrink-0 relative">
                             {(member.full_name || member.email)[0].toUpperCase()}
+                            <span 
+                              className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-dash-surface ${
+                                member.online_status ? "bg-emerald-500 shadow-xs shadow-emerald-500/50" : "bg-zinc-400"
+                              }`}
+                              title={member.online_status ? "Online Now" : "Offline"}
+                            />
                           </div>
                           <div>
-                            <div className="font-medium text-dash-text">{member.full_name || "Unassigned"}</div>
-                            <div className="text-dash-text-muted text-[10px] flex items-center gap-1.5 mt-0.5">
+                            <div className="font-medium text-dash-text flex items-center gap-2">
+                              <span>{member.full_name || "Unassigned"}</span>
+                              {member.online_status && (
+                                <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                  Online
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-dash-text-muted text-[10px] flex items-center gap-2 mt-0.5 flex-wrap">
                               <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {member.email}</span>
                               {member.mobile_number && (
                                 <span className="flex items-center gap-1"><Phone className="w-2.5 h-2.5" /> {member.mobile_number}</span>
+                              )}
+                              {member.last_login && (
+                                <span className="text-dash-text-muted/70 text-[9px]">
+                                  • Active {new Date(member.last_login).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                                </span>
                               )}
                             </div>
                           </div>

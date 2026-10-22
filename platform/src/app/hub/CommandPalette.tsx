@@ -23,7 +23,9 @@ import {
   Command,
   CornerDownLeft,
   Wand2,
-  FileText
+  FileText,
+  Utensils,
+  BellRing
 } from "lucide-react";
 
 export interface CommandPaletteItem {
@@ -91,7 +93,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       { id: "tab-agent", title: "Agent Settings", description: "Bot persona, tone controls, language SLA & WhatsApp HSM", icon: Settings, tabKey: "agent_settings" },
       { id: "tab-channels", title: "Channel Integrations", description: "WhatsApp WABA, Instagram, Facebook, Web Widget & Tawk.to", icon: Blocks, tabKey: "channels" },
       { id: "tab-staff", title: "Staff & Shift Operations", description: "Team directory, active shifts, escalation SLAs & department roster", icon: UserCheck, tabKey: "staff" },
-      { id: "tab-bookings", title: "Bookings & Direct Ledger", description: "Direct reservation ledger, 3% savings, orders & kanban dispatch", icon: Calendar, tabKey: "bookings" },
+      { id: "tab-bookings", title: "Bookings & Direct Ledger", description: "Direct reservation ledger, 3% savings, calendar & folios", icon: Calendar, tabKey: "bookings" },
+      { id: "tab-orders", title: "Dining & Orders", description: "F&B room service orders, kitchen ticket dispatch & folio charging", icon: Utensils, tabKey: "orders" },
+      { id: "tab-services", title: "Guest Services", description: "Housekeeping, maintenance, laundry & concierge requests", icon: BellRing, tabKey: "services" },
       { id: "tab-analytics", title: "Analytics & Intelligence", description: "Heatmaps, intent matrices, staff benchmarks & custom report studio", icon: BarChart3, tabKey: "analytics" },
       { id: "tab-feedback", title: "Guest Feedback & NPS", description: "CSAT scorecards, sentiment analysis & autonomous review booster", icon: Star, tabKey: "feedback" },
       { id: "tab-compliance", title: "Compliance & GDPR Suite", description: "Art. 15 access, Art. 17 erasure, DPA agreements & PII masking", icon: ShieldCheck, tabKey: "compliance" },

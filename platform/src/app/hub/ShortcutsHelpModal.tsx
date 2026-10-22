@@ -20,6 +20,8 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
     { key: "G then I", description: "Jump to Live Guest Inbox" },
     { key: "G then C", description: "Jump to Guest CRM" },
     { key: "G then B", description: "Jump to Bookings & Ledger" },
+    { key: "G then O", description: "Jump to Dining & Orders" },
+    { key: "G then V", description: "Jump to Guest Services" },
     { key: "G then A", description: "Jump to Analytics & Intelligence" },
     { key: "G then F", description: "Jump to Guest Feedback & NPS" },
     { key: "G then S", description: "Jump to Staff & Shifts" },

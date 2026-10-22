@@ -1,29 +1,21 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue } from "react";
 import { 
   Calendar as CalendarIcon, Filter, Search, MoreHorizontal, 
-  Download, List, X, Coffee, Clock, CheckCircle2, User, 
+  Download, List, X, User, 
   CreditCard, Phone, Mail, MapPin, RefreshCw, ChevronLeft, 
   ChevronRight, ChevronDown, Ban, AlertTriangle, MessageSquare,
-  Sparkles, Utensils, BellRing, Copy, Check, Eye, Trash2, ArrowUpRight,
-  Layers, SlidersHorizontal, Send, FileText, Plus, ShieldAlert
+  Sparkles, Copy, Check, Eye, Trash2, ArrowUpRight,
+  Layers
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../context/AuthContext";
-import { useSandbox, SandboxBooking, SandboxOrder, SandboxServiceRequest } from "../../../context/SandboxDataContext";
+import { useSandbox, SandboxBooking } from "../../../context/SandboxDataContext";
 import { useToast } from "../../../shared/ToastContext";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { StandardTable, StandardTableColumn, TableDensity } from "../../../shared/StandardTable";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export type BookingStatus = 'Confirmed' | 'Pending' | 'Cancelled' | 'Refunded';
-
-export interface StaffRemark {
-  id: string;
-  author: string;
-  role?: string;
-  content: string;
-  created_at: string;
-}
 
 export interface BookingRecord {
   id: string;
@@ -49,41 +41,6 @@ export interface BookingRecord {
   cancellation_reason?: string;
   refund_reference?: string;
   modification_history?: { timestamp: string; note: string; actor: string }[];
-  created_at: string;
-}
-
-export interface OrderRecord {
-  id: string;
-  hotel_id: string;
-  session_id: string;
-  room_number: string;
-  guest_name?: string;
-  items: { name: string; qty: number; price?: number }[];
-  total_amount: number;
-  fee_amount?: number;
-  status: string;
-  channel?: string;
-  priority?: "normal" | "rush" | "vip";
-  payment_method?: string;
-  special_instructions?: string;
-  staff_remarks?: StaffRemark[];
-  notes?: string;
-  created_at: string;
-}
-
-export interface ServiceRequestRecord {
-  id: string;
-  hotel_id: string;
-  session_id: string;
-  room_number: string;
-  guest_name?: string;
-  service_type: string;
-  details?: { notes?: string; urgency?: "normal" | "urgent" };
-  scheduled_for?: string | null;
-  status: "pending" | "preparing" | "completed" | string;
-  channel?: string;
-  assigned_staff?: string;
-  staff_remarks?: StaffRemark[];
   created_at: string;
 }
 
@@ -127,17 +84,12 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
   const { formatMoney } = useCurrency();
   const { isSandbox, data: sandboxData, updateData, regenerate } = useSandbox();
 
-  // Navigation & Sub-tabs
-  const [activeSubTab, setActiveSubTab] = useState<"bookings" | "orders">("bookings");
+  // Navigation & View Mode
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [calendarScope, setCalendarScope] = useState<"month" | "week" | "day">("month");
-  const [ordersViewMode, setOrdersViewMode] = useState<"kanban" | "table">("kanban");
-  const [orderCategoryTab, setOrderCategoryTab] = useState<"orders" | "services">("orders");
 
   // State Collections
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
-  const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [serviceRequests, setServiceRequests] = useState<ServiceRequestRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters & Search
@@ -154,21 +106,16 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
 
   // Modals & Drawers
   const [selectedBooking, setSelectedBooking] = useState<BookingRecord | null>(null);
-  const [selectedOrder, setSelectedOrder] = useState<OrderRecord | null>(null);
-  const [selectedServiceRequest, setSelectedServiceRequest] = useState<ServiceRequestRecord | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("Guest Request");
   const [cancelRefundNotes, setCancelRefundNotes] = useState("");
   const [isProcessingCancel, setIsProcessingCancel] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [ordersSearchQuery, setOrdersSearchQuery] = useState("");
   const [showRoomTypeDropdown, setShowRoomTypeDropdown] = useState(false);
-  const [newRemarkText, setNewRemarkText] = useState("");
 
   // Refs & deferred values for debounced search (React 18)
   const searchInputRef = useRef<HTMLInputElement>(null);
   const deferredSearch = useDeferredValue(searchQuery);
-  const deferredOrdersSearch = useDeferredValue(ordersSearchQuery);
 
   const isManager = role === "super_admin" || role === "agency_staff" || role === "hotel_manager";
 
@@ -186,8 +133,6 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
         status: b.status as BookingStatus,
       }));
       setBookings(bks);
-      setOrders((sandboxData.orders as OrderRecord[]) || []);
-      setServiceRequests((sandboxData.serviceRequests as ServiceRequestRecord[]) || []);
       setLoading(false);
       return;
     }
@@ -199,7 +144,7 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
 
     try {
       // 1. Fetch booking_events (primary) + bookings
-      const [eventsRes, bookingsRes, ordersRes, servicesRes] = await Promise.all([
+      const [eventsRes, bookingsRes] = await Promise.all([
         supabase
           .from("booking_events")
           .select("*")
@@ -210,16 +155,6 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
           .select("*")
           .eq("hotel_id", hotelId)
           .order("created_at", { ascending: false }),
-        supabase
-          .from("orders")
-          .select("*")
-          .eq("hotel_id", hotelId)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("service_requests")
-          .select("*")
-          .eq("hotel_id", hotelId)
-          .order("created_at", { ascending: false })
       ]);
 
       const eventsData = eventsRes.data || [];
@@ -272,8 +207,6 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
           });
 
       setBookings(unifiedBookings);
-      if (ordersRes.data) setOrders(ordersRes.data as OrderRecord[]);
-      if (servicesRes.data) setServiceRequests(servicesRes.data as ServiceRequestRecord[]);
     } catch (err: any) {
       console.error("Error loading bookings data:", err);
       showToast("Failed to load bookings: " + err.message, "error");
@@ -348,36 +281,6 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
       return 0;
     });
   }, [bookings, deferredSearch, statusFilter, channelFilter, allRoomTypes, selectedRoomTypes, sortKey, sortDirection]);
-
-  // ─── Orders & Service Requests — Search-filtered ────────────────────
-  const matchedOrders = useMemo(() => {
-    if (!deferredOrdersSearch.trim()) return orders;
-    const q = deferredOrdersSearch.toLowerCase();
-    return orders.filter(o =>
-      o.session_id?.toLowerCase().includes(q) ||
-      o.room_number?.toLowerCase().includes(q) ||
-      o.guest_name?.toLowerCase().includes(q) ||
-      o.items?.some(i => i.name?.toLowerCase().includes(q)) ||
-      o.status?.toLowerCase().includes(q) ||
-      o.notes?.toLowerCase().includes(q) ||
-      o.special_instructions?.toLowerCase().includes(q) ||
-      o.priority?.toLowerCase().includes(q)
-    );
-  }, [orders, deferredOrdersSearch]);
-
-  const matchedServices = useMemo(() => {
-    if (!deferredOrdersSearch.trim()) return serviceRequests;
-    const q = deferredOrdersSearch.toLowerCase();
-    return serviceRequests.filter(s =>
-      s.session_id?.toLowerCase().includes(q) ||
-      s.room_number?.toLowerCase().includes(q) ||
-      s.guest_name?.toLowerCase().includes(q) ||
-      s.service_type?.toLowerCase().includes(q) ||
-      s.details?.notes?.toLowerCase().includes(q) ||
-      s.assigned_staff?.toLowerCase().includes(q) ||
-      s.status?.toLowerCase().includes(q)
-    );
-  }, [serviceRequests, deferredOrdersSearch]);
 
   // Active filter count for badge + clear-all
   const activeFilterCount = useMemo(() => {
@@ -459,7 +362,7 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
   // ─── Keyboard Shortcut: ⌘F / Ctrl+F to focus search ─────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "f" && activeSubTab === "bookings") {
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();
         searchInputRef.current?.focus();
         searchInputRef.current?.select();
@@ -471,7 +374,7 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [activeSubTab]);
+  }, []);
 
   // ─── Realtime Bot-Engine → Dashboard (live booking_events) ───────────────
   // When the bot processes a new reservation via WhatsApp/Instagram/Widget,
@@ -599,118 +502,6 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
     } finally {
       setIsProcessingCancel(false);
     }
-  };
-
-  // ─── Order & Request Status Updates ───────────────────────────────────────
-  const handleUpdateOrderStatus = async (id: string, newStatus: string) => {
-    if (isSandbox) {
-      updateData(prev => ({
-        ...prev,
-        orders: prev.orders.map(o => o.id === id ? { ...o, status: newStatus } : o)
-      }));
-      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
-      setSelectedOrder(prev => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
-      showToast(`Order status updated to ${newStatus}`, "success");
-    } else {
-      try {
-        await supabase.from("orders").update({ status: newStatus }).eq("id", id);
-        setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
-        setSelectedOrder(prev => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
-        showToast(`Order status updated to ${newStatus}`, "success");
-      } catch (err: any) {
-        showToast("Failed to update status: " + err.message, "error");
-      }
-    }
-  };
-
-  const handleUpdateServiceStatus = async (id: string, newStatus: string) => {
-    if (isSandbox) {
-      updateData(prev => ({
-        ...prev,
-        serviceRequests: (prev.serviceRequests || []).map(s => s.id === id ? { ...s, status: newStatus as any } : s)
-      }));
-      setServiceRequests(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
-      setSelectedServiceRequest(prev => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
-      showToast(`Service request updated to ${newStatus}`, "success");
-    } else {
-      try {
-        await supabase.from("service_requests").update({ status: newStatus }).eq("id", id);
-        setServiceRequests(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
-        setSelectedServiceRequest(prev => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
-        showToast(`Service request updated to ${newStatus}`, "success");
-      } catch (err: any) {
-        showToast("Failed to update status: " + err.message, "error");
-      }
-    }
-  };
-
-  // ─── Staff Remarks / Notes Handler ─────────────────────────────────────────
-  const handleAddOrderRemark = (orderId: string, content: string) => {
-    if (!content.trim()) return;
-    const newRemark: StaffRemark = {
-      id: "rem_" + Date.now(),
-      author: user?.user_metadata?.full_name || "Front Desk Staff",
-      role: role === "hotel_manager" ? "Manager" : "Concierge",
-      content: content.trim(),
-      created_at: new Date().toISOString()
-    };
-
-    if (isSandbox) {
-      updateData(prev => ({
-        ...prev,
-        orders: prev.orders.map(o => o.id === orderId ? {
-          ...o,
-          staff_remarks: [...(o.staff_remarks || []), newRemark]
-        } : o)
-      }));
-    }
-
-    setOrders(prev => prev.map(o => o.id === orderId ? {
-      ...o,
-      staff_remarks: [...(o.staff_remarks || []), newRemark]
-    } : o));
-
-    setSelectedOrder(prev => prev && prev.id === orderId ? {
-      ...prev,
-      staff_remarks: [...(prev.staff_remarks || []), newRemark]
-    } : prev);
-
-    setNewRemarkText("");
-    showToast("Operational remark recorded", "success");
-  };
-
-  const handleAddServiceRemark = (serviceId: string, content: string) => {
-    if (!content.trim()) return;
-    const newRemark: StaffRemark = {
-      id: "rem_" + Date.now(),
-      author: user?.user_metadata?.full_name || "Guest Services",
-      role: role === "hotel_manager" ? "Manager" : "Staff",
-      content: content.trim(),
-      created_at: new Date().toISOString()
-    };
-
-    if (isSandbox) {
-      updateData(prev => ({
-        ...prev,
-        serviceRequests: (prev.serviceRequests || []).map(s => s.id === serviceId ? {
-          ...s,
-          staff_remarks: [...(s.staff_remarks || []), newRemark]
-        } : s)
-      }));
-    }
-
-    setServiceRequests(prev => prev.map(s => s.id === serviceId ? {
-      ...s,
-      staff_remarks: [...(s.staff_remarks || []), newRemark]
-    } : s));
-
-    setSelectedServiceRequest(prev => prev && prev.id === serviceId ? {
-      ...prev,
-      staff_remarks: [...(prev.staff_remarks || []), newRemark]
-    } : prev);
-
-    setNewRemarkText("");
-    showToast("Operational remark recorded", "success");
   };
 
   // ─── Export CSV ───────────────────────────────────────────────────────────
@@ -977,32 +768,27 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
             <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#EA6639]/10 text-[#EA6639] border border-[#EA6639]/20">
               {propertyName}
             </span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-dash-surface border border-dash-border text-dash-text-muted">
-              Level 2 Automation
-            </span>
           </div>
           <p className="text-body text-dash-text-sec mt-0.5">
-            Centralized reservation ledger, calendar scheduling, 3% agency commission tracking, and POS service requests.
+            Centralized reservation ledger, calendar scheduling, agency commission tracking, and direct guest communication.
           </p>
         </div>
         
         <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-          {activeSubTab === "bookings" && (
-            <div className="flex bg-dash-surface border border-dash-border rounded-lg p-0.5 shadow-xs">
-              <button 
-                onClick={() => setViewMode("list")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === "list" ? "bg-dash-canvas text-dash-text font-semibold shadow-xs" : "text-dash-text-muted hover:text-dash-text"}`}
-              >
-                <List className="w-3.5 h-3.5" /> Table
-              </button>
-              <button 
-                onClick={() => setViewMode("calendar")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === "calendar" ? "bg-dash-canvas text-dash-text font-semibold shadow-xs" : "text-dash-text-muted hover:text-dash-text"}`}
-              >
-                <CalendarIcon className="w-3.5 h-3.5" /> Calendar
-              </button>
-            </div>
-          )}
+          <div className="flex bg-dash-surface border border-dash-border rounded-lg p-0.5 shadow-xs">
+            <button 
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === "list" ? "bg-dash-canvas text-dash-text font-semibold shadow-xs" : "text-dash-text-muted hover:text-dash-text"}`}
+            >
+              <List className="w-3.5 h-3.5" /> Table
+            </button>
+            <button 
+              onClick={() => setViewMode("calendar")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${viewMode === "calendar" ? "bg-dash-canvas text-dash-text font-semibold shadow-xs" : "text-dash-text-muted hover:text-dash-text"}`}
+            >
+              <CalendarIcon className="w-3.5 h-3.5" /> Calendar
+            </button>
+          </div>
 
           <button 
             onClick={handleExportCSV}
@@ -1014,39 +800,9 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
         </div>
       </div>
 
-      {/* ── Sub-tabs Header ── */}
-      <div className="flex gap-6 border-b border-dash-border px-1">
-        <button 
-          onClick={() => setActiveSubTab("bookings")}
-          className={`pb-2.5 text-sm font-medium transition-colors relative flex items-center gap-2 ${activeSubTab === "bookings" ? "text-[#EA6639] font-semibold" : "text-dash-text-muted hover:text-dash-text"}`}
-        >
-          <CalendarIcon className="w-4 h-4" />
-          <span>Bookings & Ledger</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-dash-canvas border border-dash-border text-dash-text-muted">
-            {bookings.length}
-          </span>
-          {activeSubTab === "bookings" && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-[#EA6639] rounded-t-full shadow-[0_0_8px_rgba(234,102,57,0.4)]"></span>}
-        </button>
-
-        <button 
-          onClick={() => setActiveSubTab("orders")}
-          className={`pb-2.5 text-sm font-medium transition-colors relative flex items-center gap-2 ${activeSubTab === "orders" ? "text-[#EA6639] font-semibold" : "text-dash-text-muted hover:text-dash-text"}`}
-        >
-          <Coffee className="w-4 h-4" />
-          <span>Orders & Requests</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-dash-canvas border border-dash-border text-dash-text-muted">
-            {orders.length + serviceRequests.length}
-          </span>
-          {activeSubTab === "orders" && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-[#EA6639] rounded-t-full shadow-[0_0_8px_rgba(234,102,57,0.4)]"></span>}
-        </button>
-      </div>
-
       {/* ── Main Content Area ── */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-
-        {/* ── 1. Bookings Sub-tab ── */}
-        {activeSubTab === "bookings" && (
-          <div className="flex-1 flex flex-col min-h-0 space-y-3">
+        <div className="flex-1 flex flex-col min-h-0 space-y-3">
             
             {/* ── Enhanced Filter Toolbar ── */}
             <div className="space-y-2">
@@ -1624,345 +1380,6 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
               </div>
             )}
           </div>
-        )}
-
-        {/* ── 2. Orders & Service Requests Sub-tab (Screen 8.4) ── */}
-        {activeSubTab === "orders" && (
-          <div className="flex-1 flex flex-col min-h-0 space-y-3">
-            
-            {/* Orders Toolbar — with search */}
-            <div className="p-2.5 bg-dash-surface border border-dash-border rounded-xl flex flex-wrap items-center justify-between gap-2 shadow-xs">
-              <div className="flex items-center gap-2 flex-wrap flex-1">
-                {/* Category Selector */}
-                <div className="flex bg-dash-canvas border border-dash-border rounded-lg p-0.5 text-xs shrink-0">
-                  <button
-                    onClick={() => setOrderCategoryTab("orders")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all ${
-                      orderCategoryTab === "orders"
-                        ? "bg-dash-surface text-dash-text font-semibold shadow-xs"
-                        : "text-dash-text-muted hover:text-dash-text"
-                    }`}
-                  >
-                    <Utensils className="w-3.5 h-3.5 text-[#EA6639]" />
-                    <span>Food &amp; Beverage</span>
-                    <span className="px-1.5 py-0.5 rounded-full bg-dash-border text-[10px] font-mono font-bold text-dash-text-muted">
-                      {ordersSearchQuery ? matchedOrders.length : orders.length}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setOrderCategoryTab("services")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all ${
-                      orderCategoryTab === "services"
-                        ? "bg-dash-surface text-dash-text font-semibold shadow-xs"
-                        : "text-dash-text-muted hover:text-dash-text"
-                    }`}
-                  >
-                    <BellRing className="w-3.5 h-3.5 text-blue-500" />
-                    <span>Guest Requests ({serviceRequests.length})</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* View mode toggle for Orders */}
-              <div className="flex bg-dash-canvas border border-dash-border rounded-lg p-0.5 text-xs">
-                <button
-                  onClick={() => setOrdersViewMode("kanban")}
-                  className={`px-3 py-1.5 rounded-md font-medium transition-all ${ordersViewMode === "kanban" ? "bg-dash-surface text-dash-text font-semibold shadow-xs" : "text-dash-text-muted hover:text-dash-text"}`}
-                >
-                  Kanban Board
-                </button>
-                <button
-                  onClick={() => setOrdersViewMode("table")}
-                  className={`px-3 py-1.5 rounded-md font-medium transition-all ${ordersViewMode === "table" ? "bg-dash-surface text-dash-text font-semibold shadow-xs" : "text-dash-text-muted hover:text-dash-text"}`}
-                >
-                  Table List
-                </button>
-              </div>
-            </div>
-
-            {/* Orders Content Area */}
-            {ordersViewMode === "kanban" ? (
-              /* Kanban View */
-              <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden">
-                {(["Pending", "Preparing", "Completed"] as const).map(colStatus => {
-                  const filteredOrders = matchedOrders.filter(o => o.status?.toLowerCase() === colStatus.toLowerCase());
-                  const filteredServices = matchedServices.filter(s => s.status?.toLowerCase() === colStatus.toLowerCase());
-
-                  const colColor = colStatus === "Pending"
-                    ? { header: "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400", border: "border-amber-500/20", icon: <Clock className="w-4 h-4 text-amber-500" />, badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" }
-                    : colStatus === "Preparing"
-                    ? { header: "bg-sky-500/10 border-sky-500/20 text-sky-600 dark:text-sky-400", border: "border-sky-500/20", icon: <RefreshCw className="w-4 h-4 text-sky-500 animate-spin" />, badge: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30" }
-                    : { header: "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400", border: "border-emerald-500/20", icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />, badge: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" };
-
-                  return (
-                    <div key={colStatus} className={`flex flex-col h-full bg-dash-surface rounded-xl border ${colColor.border} shadow-sm overflow-hidden`}>
-                      {/* Column Header */}
-                      <div className={`p-3 border-b ${colColor.header} flex justify-between items-center transition-colors`}>
-                        <div className="flex items-center gap-2">
-                          {colColor.icon}
-                          <h4 className="text-xs font-bold uppercase tracking-wider">{colStatus}</h4>
-                        </div>
-                        <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-full border ${colColor.badge}`}>
-                          {orderCategoryTab === "orders" ? filteredOrders.length : filteredServices.length}
-                        </span>
-                      </div>
-
-                      {/* Column Card List */}
-                      <div className="p-3 flex-1 overflow-y-auto space-y-3">
-                        {orderCategoryTab === "orders" ? (
-                          filteredOrders.length === 0 ? (
-                            <div className="text-center py-12 text-dash-text-muted text-xs">
-                              <Utensils className="w-6 h-6 mx-auto mb-2 opacity-30" />
-                              No {colStatus.toLowerCase()} orders
-                            </div>
-                          ) : (
-                            filteredOrders.map(order => (
-                              <div
-                                key={order.id}
-                                onClick={() => setSelectedOrder(order)}
-                                className="bg-dash-canvas border border-dash-border hover:border-[#EA6639]/60 hover:shadow-md rounded-xl p-3.5 transition-all cursor-pointer group space-y-2.5"
-                              >
-                                <div className="flex justify-between items-start">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-[11px] font-bold text-[#EA6639] bg-[#EA6639]/10 px-2 py-0.5 rounded font-mono">
-                                      Room {order.room_number}
-                                    </span>
-                                    {order.priority === "rush" && (
-                                      <span className="text-[9px] font-bold text-rose-600 bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 rounded uppercase">
-                                        Rush
-                                      </span>
-                                    )}
-                                    {order.priority === "vip" && (
-                                      <span className="text-[9px] font-bold text-purple-600 bg-purple-500/10 border border-purple-500/30 px-1.5 py-0.5 rounded uppercase">
-                                        VIP
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className="text-[10px] font-mono text-dash-text-muted group-hover:text-dash-text transition-colors">
-                                    {order.session_id}
-                                  </span>
-                                </div>
-
-                                <div>
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-xs font-bold text-dash-text line-clamp-1">
-                                      {order.guest_name || "Hotel Guest"}
-                                    </p>
-                                    <span className="text-[10px] text-dash-text-muted flex items-center gap-1 font-mono">
-                                      <Clock className="w-2.5 h-2.5 text-dash-text-muted" /> {formatTimeAgo(order.created_at)}
-                                    </span>
-                                  </div>
-                                  <p className="text-[11px] text-dash-text-sec mt-1 line-clamp-2">
-                                    {order.items?.map(i => `${i.qty}x ${i.name}`).join(", ") || "Order Items"}
-                                  </p>
-                                </div>
-
-                                {order.special_instructions && (
-                                  <div className="p-1.5 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-700 dark:text-amber-300 italic line-clamp-1 flex items-center gap-1">
-                                    <span>Note:</span> {order.special_instructions}
-                                  </div>
-                                )}
-
-                                <div className="flex items-center justify-between text-xs text-dash-text-sec pt-2 border-t border-dash-border/80">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-mono font-bold text-dash-text text-xs">
-                                      {formatMoney(order.total_amount, 2)}
-                                    </span>
-                                    {order.staff_remarks && order.staff_remarks.length > 0 && (
-                                      <span className="text-[10px] font-medium text-dash-text-muted flex items-center gap-0.5 bg-dash-surface px-1.5 py-0.2 rounded border border-dash-border" title={`${order.staff_remarks.length} staff remarks`}>
-                                        <MessageSquare className="w-2.5 h-2.5 text-blue-500" /> {order.staff_remarks.length}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <div className="flex items-center gap-1.5">
-                                    {colStatus === "Pending" && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleUpdateOrderStatus(order.id, "Preparing");
-                                        }}
-                                        className="text-[11px] font-semibold text-[#EA6639] hover:bg-[#EA6639]/10 px-2 py-1 rounded transition-colors flex items-center gap-1"
-                                      >
-                                        Start Prep &rarr;
-                                      </button>
-                                    )}
-                                    {colStatus === "Preparing" && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleUpdateOrderStatus(order.id, "Completed");
-                                        }}
-                                        className="text-[11px] font-semibold text-emerald-600 hover:bg-emerald-500/10 px-2 py-1 rounded transition-colors flex items-center gap-1"
-                                      >
-                                        Mark Delivered &rarr;
-                                      </button>
-                                    )}
-                                    {colStatus === "Completed" && (
-                                      <span className="text-[10px] font-medium text-emerald-600 flex items-center gap-1">
-                                        <Check className="w-3 h-3" /> Delivered
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          )
-                        ) : (
-                          filteredServices.length === 0 ? (
-                            <div className="text-center py-12 text-dash-text-muted text-xs">
-                              <BellRing className="w-6 h-6 mx-auto mb-2 opacity-30" />
-                              No {colStatus.toLowerCase()} requests
-                            </div>
-                          ) : (
-                            filteredServices.map(service => (
-                              <div
-                                key={service.id}
-                                onClick={() => setSelectedServiceRequest(service)}
-                                className="bg-dash-canvas border border-dash-border hover:border-blue-500/60 hover:shadow-md rounded-xl p-3.5 transition-all cursor-pointer group space-y-2.5"
-                              >
-                                <div className="flex justify-between items-start">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-[11px] font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded font-mono">
-                                      Room {service.room_number}
-                                    </span>
-                                    {service.details?.urgency === "urgent" && (
-                                      <span className="text-[9px] font-bold text-rose-600 bg-rose-500/10 border border-rose-500/30 px-1.5 py-0.5 rounded uppercase">
-                                        Urgent
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className="text-[10px] font-mono text-dash-text-muted group-hover:text-dash-text transition-colors">
-                                    {service.session_id}
-                                  </span>
-                                </div>
-
-                                <div>
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-xs font-bold text-dash-text line-clamp-1">
-                                      {service.guest_name || "Hotel Guest"}
-                                    </p>
-                                    <span className="text-[10px] text-dash-text-muted flex items-center gap-1 font-mono">
-                                      <Clock className="w-2.5 h-2.5 text-dash-text-muted" /> {formatTimeAgo(service.created_at)}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mt-1">
-                                    {service.service_type}
-                                  </p>
-                                  <p className="text-[11px] text-dash-text-muted mt-0.5 line-clamp-2">
-                                    {service.details?.notes || "Digital concierge assistance requested"}
-                                  </p>
-                                </div>
-
-                                <div className="flex items-center justify-between text-xs text-dash-text-sec pt-2 border-t border-dash-border/80">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-dash-text-sec flex items-center gap-1">
-                                      <User className="w-2.5 h-2.5 text-dash-text-muted" /> {service.assigned_staff ? service.assigned_staff.split(" ")[0] : "Desk"}
-                                    </span>
-                                    {service.staff_remarks && service.staff_remarks.length > 0 && (
-                                      <span className="text-[10px] font-medium text-dash-text-muted flex items-center gap-0.5 bg-dash-surface px-1.5 py-0.2 rounded border border-dash-border" title={`${service.staff_remarks.length} remarks`}>
-                                        <MessageSquare className="w-2.5 h-2.5 text-blue-500" /> {service.staff_remarks.length}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <div className="flex items-center gap-1.5">
-                                    {colStatus === "Pending" && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleUpdateServiceStatus(service.id, "preparing");
-                                        }}
-                                        className="text-[11px] font-semibold text-blue-600 hover:bg-blue-500/10 px-2 py-1 rounded transition-colors flex items-center gap-1"
-                                      >
-                                        Start &rarr;
-                                      </button>
-                                    )}
-                                    {colStatus === "Preparing" && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleUpdateServiceStatus(service.id, "completed");
-                                        }}
-                                        className="text-[11px] font-semibold text-emerald-600 hover:bg-emerald-500/10 px-2 py-1 rounded transition-colors flex items-center gap-1"
-                                      >
-                                        Complete &rarr;
-                                      </button>
-                                    )}
-                                    {colStatus === "Completed" && (
-                                      <span className="text-[10px] font-medium text-emerald-600 flex items-center gap-1">
-                                        <Check className="w-3 h-3" /> Completed
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          )
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              /* Table View for Orders */
-              <div className="flex-1 min-h-0 flex flex-col">
-                {orderCategoryTab === "orders" ? (
-                  <StandardTable<OrderRecord>
-                    data={matchedOrders}
-                    keyField="id"
-                    columns={[
-                      { key: "session_id", header: "Order Ref", isSticky: true, width: "130px", render: o => <span className="font-mono text-xs font-semibold">{o.session_id}</span> },
-                      { key: "room_number", header: "Room", width: "90px", render: o => <span className="font-bold text-[#EA6639] font-mono">#{o.room_number}</span> },
-                      { key: "items", header: "Items Ordered", render: o => <span className="text-xs">{o.items?.map(i => `${i.qty}x ${i.name}`).join(", ") || "—"}</span> },
-                      { key: "total_amount", header: "Amount", isNumeric: true, width: "110px", render: o => <span className="font-bold font-mono text-xs">{formatMoney(o.total_amount, 2)}</span> },
-                      { key: "status", header: "Status", width: "110px", render: o => <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${getStatusBadge(o.status)}`}>{o.status}</span> },
-                      { key: "created_at", header: "Time", width: "120px", render: o => <span className="text-xs text-dash-text-muted font-mono">{new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> },
-                    ]}
-                    onRowClick={o => setSelectedOrder(o)}
-                    renderRowActions={o => (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setSelectedOrder(o); }}
-                        className="p-1 hover:text-[#EA6639]"
-                        title="View Details"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  />
-                ) : (
-                  <StandardTable<ServiceRequestRecord>
-                    data={matchedServices}
-                    keyField="id"
-                    columns={[
-                      { key: "session_id", header: "Request Ref", isSticky: true, width: "130px", render: s => <span className="font-mono text-xs font-semibold">{s.session_id}</span> },
-                      { key: "room_number", header: "Room", width: "90px", render: s => <span className="font-bold text-blue-600 font-mono">#{s.room_number}</span> },
-                      { key: "service_type", header: "Service Type", render: s => <span className="text-xs font-medium">{s.service_type}</span> },
-                      { key: "details", header: "Notes", render: s => <span className="text-xs text-dash-text-sec">{s.details?.notes || "—"}</span> },
-                      { key: "status", header: "Status", width: "110px", render: s => <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize ${getStatusBadge(s.status)}`}>{s.status}</span> },
-                      { key: "created_at", header: "Time", width: "120px", render: s => <span className="text-xs text-dash-text-muted font-mono">{new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> },
-                    ]}
-                    onRowClick={s => setSelectedServiceRequest(s)}
-                    renderRowActions={s => (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setSelectedServiceRequest(s); }}
-                        className="p-1 hover:text-[#EA6639]"
-                        title="View Details"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* ── Screen 8.3: Booking Detail Slide-Over Modal ── */}
@@ -2223,443 +1640,6 @@ export function BookingsTab({ role = "hotel_manager", propertyName = "Dero Apart
         </div>
       )}
 
-      {/* ── Order Detail Drawer Pane ── */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs transition-opacity animate-in fade-in duration-150">
-          <div className="w-full max-w-lg bg-dash-surface h-full shadow-2xl border-l border-dash-border flex flex-col animate-in slide-in-from-right duration-200">
-            {/* Drawer Header */}
-            <div className="p-4 border-b border-dash-border flex items-center justify-between bg-dash-canvas">
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-1.5">
-                  <Utensils className="w-4 h-4 text-[#EA6639]" />
-                  <span className="font-mono text-xs font-bold text-dash-text">{selectedOrder.session_id}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(selectedOrder.session_id);
-                    setCopiedId(selectedOrder.session_id);
-                    setTimeout(() => setCopiedId(null), 2000);
-                  }}
-                  className="p-1 rounded hover:bg-dash-surface text-dash-text-muted hover:text-dash-text transition-colors"
-                  title="Copy reference"
-                >
-                  {copiedId === selectedOrder.session_id ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {/* Status selector directly in drawer */}
-                <select
-                  value={selectedOrder.status}
-                  onChange={(e) => handleUpdateOrderStatus(selectedOrder.id, e.target.value)}
-                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#EA6639] ${getStatusBadge(selectedOrder.status)}`}
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Preparing">Preparing</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-
-                <button 
-                  onClick={() => { setSelectedOrder(null); setNewRemarkText(""); }} 
-                  className="p-1.5 rounded-lg text-dash-text-muted hover:text-dash-text hover:bg-dash-surface transition-colors"
-                  title="Close details"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Drawer Body */}
-            <div className="flex-1 p-5 overflow-y-auto space-y-4 text-xs">
-              {/* Guest & Room Summary Card */}
-              <div className="p-4 bg-dash-canvas rounded-xl border border-dash-border space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[10px] text-dash-text-muted uppercase font-bold tracking-wider">Guest &amp; Location</span>
-                    <h3 className="text-sm font-bold text-dash-text mt-0.5">{selectedOrder.guest_name || "Hotel Guest"}</h3>
-                  </div>
-                  <span className="text-sm font-bold text-[#EA6639] bg-[#EA6639]/10 border border-[#EA6639]/20 px-2.5 py-0.5 rounded-md font-mono">
-                    Room {selectedOrder.room_number}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-dash-border/60 text-dash-text-sec">
-                  <div>
-                    <span className="text-[10px] text-dash-text-muted block">Channel Origin</span>
-                    <span className="mt-1 inline-block">{getChannelBadge(selectedOrder.channel)}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-dash-text-muted block">Placed At</span>
-                    <span className="text-xs font-medium text-dash-text mt-1 block">
-                      {new Date(selectedOrder.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      <span className="text-[10px] text-dash-text-muted ml-1">({formatTimeAgo(selectedOrder.created_at)})</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Order Items & Receipt Breakdown */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-[11px] font-bold text-dash-text-muted uppercase tracking-wider">Itemized Breakdown</h4>
-                  <span className="text-[10px] font-mono text-dash-text-muted">{selectedOrder.items?.length || 0} line items</span>
-                </div>
-
-                <div className="bg-dash-canvas border border-dash-border rounded-xl p-3.5 space-y-2.5">
-                  <div className="divide-y divide-dash-border/80">
-                    {selectedOrder.items?.map((item, idx) => {
-                      const itemPrice = item.price || 20;
-                      return (
-                        <div key={idx} className="flex justify-between items-center py-2 first:pt-0 last:pb-0">
-                          <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded bg-dash-surface flex items-center justify-center font-mono font-bold text-dash-text text-[11px] border border-dash-border">
-                              {item.qty}
-                            </span>
-                            <span className="font-medium text-dash-text">{item.name}</span>
-                          </div>
-                          <span className="font-mono text-dash-text-sec">{formatMoney(itemPrice * item.qty, 2)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="pt-2.5 border-t border-dash-border space-y-1 text-dash-text-sec text-[11px]">
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span className="font-mono">{formatMoney(selectedOrder.total_amount, 2)}</span>
-                    </div>
-                    {selectedOrder.fee_amount ? (
-                      <div className="flex justify-between text-dash-text-muted">
-                        <span>Service &amp; Delivery Fee</span>
-                        <span className="font-mono">{formatMoney(selectedOrder.fee_amount, 2)}</span>
-                      </div>
-                    ) : null}
-                    <div className="flex justify-between pt-1.5 border-t border-dash-border/60 font-bold text-dash-text text-sm">
-                      <span>Total Amount</span>
-                      <span className="font-mono text-[#EA6639]">{formatMoney(selectedOrder.total_amount + (selectedOrder.fee_amount || 0), 2)}</span>
-                    </div>
-                  </div>
-
-                  <div className="p-2 rounded bg-dash-surface border border-dash-border flex justify-between items-center text-[10px] text-dash-text-sec">
-                    <span className="flex items-center gap-1 font-medium">
-                      <CreditCard className="w-3 h-3 text-dash-text-muted" /> Payment Method:
-                    </span>
-                    <span className="font-semibold text-dash-text">{selectedOrder.payment_method || `Charged to Room #${selectedOrder.room_number} Folio`}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Special Instructions */}
-              {selectedOrder.special_instructions && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-1">
-                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase flex items-center gap-1">
-                    <FileText className="w-3 h-3" /> Guest Special Instructions
-                  </span>
-                  <p className="text-xs text-amber-900 dark:text-amber-200">{selectedOrder.special_instructions}</p>
-                </div>
-              )}
-
-              {/* Internal Staff Remarks & Operational Notes Section */}
-              <div className="space-y-2.5 pt-1">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-[11px] font-bold text-dash-text-muted uppercase tracking-wider flex items-center gap-1.5">
-                    <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
-                    Internal Remarks &amp; Notes
-                  </h4>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-dash-canvas border border-dash-border text-dash-text-muted">
-                    {selectedOrder.staff_remarks?.length || 0}
-                  </span>
-                </div>
-
-                {/* Remarks Timeline */}
-                <div className="space-y-2 max-h-44 overflow-y-auto">
-                  {(!selectedOrder.staff_remarks || selectedOrder.staff_remarks.length === 0) ? (
-                    <div className="p-3 text-center rounded-lg bg-dash-canvas border border-dashed border-dash-border text-dash-text-muted text-[11px]">
-                      No internal remarks recorded yet. Add operational notes below.
-                    </div>
-                  ) : (
-                    selectedOrder.staff_remarks.map((rem) => (
-                      <div key={rem.id} className="p-2.5 bg-dash-canvas rounded-lg border border-dash-border space-y-1">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="font-bold text-dash-text flex items-center gap-1">
-                            <User className="w-2.5 h-2.5 text-blue-500" /> {rem.author}
-                            {rem.role && (
-                              <span className="text-[9px] font-normal text-dash-text-muted px-1 rounded bg-dash-surface border border-dash-border">
-                                {rem.role}
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-dash-text-muted font-mono">{formatTimeAgo(rem.created_at)}</span>
-                        </div>
-                        <p className="text-xs text-dash-text-sec leading-relaxed">{rem.content}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* New Remark Input */}
-                <form 
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleAddOrderRemark(selectedOrder.id, newRemarkText);
-                  }}
-                  className="space-y-2 pt-1"
-                >
-                  <textarea
-                    value={newRemarkText}
-                    onChange={(e) => setNewRemarkText(e.target.value)}
-                    placeholder="Type internal remark (e.g. 'Food dispatched via Room Service', 'Guest confirmed receipt')..."
-                    rows={2}
-                    className="w-full px-3 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs text-dash-text placeholder:text-dash-text-muted focus:ring-1 focus:ring-[#EA6639] resize-none"
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={!newRemarkText.trim()}
-                      className="px-3 py-1.5 bg-[#EA6639] hover:bg-[#EA6639]/90 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
-                    >
-                      <Send className="w-3 h-3" /> Add Remark
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            {/* Drawer Footer Actions */}
-            <div className="p-4 border-t border-dash-border bg-dash-canvas flex items-center justify-between gap-3">
-              <button 
-                onClick={() => { setSelectedOrder(null); setNewRemarkText(""); }} 
-                className="px-4 py-2 bg-dash-surface border border-dash-border hover:bg-dash-surface-hover rounded-lg text-xs font-semibold text-dash-text transition-colors"
-              >
-                Close Drawer
-              </button>
-
-              <div className="flex items-center gap-2">
-                {selectedOrder.status === "Pending" && (
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateOrderStatus(selectedOrder.id, "Preparing")}
-                    className="px-4 py-2 bg-[#EA6639] hover:bg-[#EA6639]/90 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
-                  >
-                    Start Prep &rarr;
-                  </button>
-                )}
-                {selectedOrder.status === "Preparing" && (
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateOrderStatus(selectedOrder.id, "Completed")}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
-                  >
-                    <Check className="w-3.5 h-3.5" /> Mark Delivered
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Service Request Detail Drawer Pane ── */}
-      {selectedServiceRequest && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs transition-opacity animate-in fade-in duration-150">
-          <div className="w-full max-w-lg bg-dash-surface h-full shadow-2xl border-l border-dash-border flex flex-col animate-in slide-in-from-right duration-200">
-            {/* Drawer Header */}
-            <div className="p-4 border-b border-dash-border flex items-center justify-between bg-dash-canvas">
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-1.5">
-                  <BellRing className="w-4 h-4 text-blue-500" />
-                  <span className="font-mono text-xs font-bold text-dash-text">{selectedServiceRequest.session_id}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(selectedServiceRequest.session_id);
-                    setCopiedId(selectedServiceRequest.session_id);
-                    setTimeout(() => setCopiedId(null), 2000);
-                  }}
-                  className="p-1 rounded hover:bg-dash-surface text-dash-text-muted hover:text-dash-text transition-colors"
-                  title="Copy reference"
-                >
-                  {copiedId === selectedServiceRequest.session_id ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {/* Status selector directly in drawer */}
-                <select
-                  value={selectedServiceRequest.status}
-                  onChange={(e) => handleUpdateServiceStatus(selectedServiceRequest.id, e.target.value)}
-                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500 capitalize ${getStatusBadge(selectedServiceRequest.status)}`}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="preparing">Preparing</option>
-                  <option value="completed">Completed</option>
-                </select>
-
-                <button 
-                  onClick={() => { setSelectedServiceRequest(null); setNewRemarkText(""); }} 
-                  className="p-1.5 rounded-lg text-dash-text-muted hover:text-dash-text hover:bg-dash-surface transition-colors"
-                  title="Close details"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Drawer Body */}
-            <div className="flex-1 p-5 overflow-y-auto space-y-4 text-xs">
-              {/* Guest & Room Summary Card */}
-              <div className="p-4 bg-dash-canvas rounded-xl border border-dash-border space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[10px] text-dash-text-muted uppercase font-bold tracking-wider">Guest &amp; Location</span>
-                    <h3 className="text-sm font-bold text-dash-text mt-0.5">{selectedServiceRequest.guest_name || "Hotel Guest"}</h3>
-                  </div>
-                  <span className="text-sm font-bold text-blue-600 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded-md font-mono">
-                    Room {selectedServiceRequest.room_number}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-dash-border/60 text-dash-text-sec">
-                  <div>
-                    <span className="text-[10px] text-dash-text-muted block">Channel Origin</span>
-                    <span className="mt-1 inline-block">{getChannelBadge(selectedServiceRequest.channel)}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-dash-text-muted block">Requested At</span>
-                    <span className="text-xs font-medium text-dash-text mt-1 block">
-                      {new Date(selectedServiceRequest.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      <span className="text-[10px] text-dash-text-muted ml-1">({formatTimeAgo(selectedServiceRequest.created_at)})</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Service Details Card */}
-              <div className="p-4 bg-dash-canvas border border-dash-border rounded-xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-bold text-dash-text-muted uppercase tracking-wider">Service Requested</span>
-                  {selectedServiceRequest.details?.urgency === "urgent" && (
-                    <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-600 border border-rose-500/20 text-[10px] font-bold uppercase">
-                      Urgent Priority
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-sm font-bold text-dash-text">{selectedServiceRequest.service_type}</p>
-                <p className="text-dash-text-sec text-xs leading-relaxed">{selectedServiceRequest.details?.notes || "Digital concierge assistance requested"}</p>
-
-                <div className="pt-2 border-t border-dash-border/60 flex justify-between items-center text-[11px] text-dash-text-sec">
-                  <span className="flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-blue-500" /> Assigned Staff:
-                  </span>
-                  <span className="font-semibold text-dash-text">
-                    {selectedServiceRequest.assigned_staff || "Front Desk / Guest Services"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Internal Staff Remarks & Operational Notes Section */}
-              <div className="space-y-2.5 pt-1">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-[11px] font-bold text-dash-text-muted uppercase tracking-wider flex items-center gap-1.5">
-                    <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
-                    Internal Remarks &amp; Resolution Notes
-                  </h4>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-dash-canvas border border-dash-border text-dash-text-muted">
-                    {selectedServiceRequest.staff_remarks?.length || 0}
-                  </span>
-                </div>
-
-                {/* Remarks Timeline */}
-                <div className="space-y-2 max-h-44 overflow-y-auto">
-                  {(!selectedServiceRequest.staff_remarks || selectedServiceRequest.staff_remarks.length === 0) ? (
-                    <div className="p-3 text-center rounded-lg bg-dash-canvas border border-dashed border-dash-border text-dash-text-muted text-[11px]">
-                      No operational remarks recorded yet.
-                    </div>
-                  ) : (
-                    selectedServiceRequest.staff_remarks.map((rem) => (
-                      <div key={rem.id} className="p-2.5 bg-dash-canvas rounded-lg border border-dash-border space-y-1">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="font-bold text-dash-text flex items-center gap-1">
-                            <User className="w-2.5 h-2.5 text-blue-500" /> {rem.author}
-                            {rem.role && (
-                              <span className="text-[9px] font-normal text-dash-text-muted px-1 rounded bg-dash-surface border border-dash-border">
-                                {rem.role}
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-dash-text-muted font-mono">{formatTimeAgo(rem.created_at)}</span>
-                        </div>
-                        <p className="text-xs text-dash-text-sec leading-relaxed">{rem.content}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* New Remark Input */}
-                <form 
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleAddServiceRemark(selectedServiceRequest.id, newRemarkText);
-                  }}
-                  className="space-y-2 pt-1"
-                >
-                  <textarea
-                    value={newRemarkText}
-                    onChange={(e) => setNewRemarkText(e.target.value)}
-                    placeholder="Type internal remark (e.g. 'Delivered extra towels to Room 304', 'Guest verified satisfaction')..."
-                    rows={2}
-                    className="w-full px-3 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs text-dash-text placeholder:text-dash-text-muted focus:ring-1 focus:ring-blue-500 resize-none"
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={!newRemarkText.trim()}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
-                    >
-                      <Send className="w-3 h-3" /> Add Remark
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            {/* Drawer Footer Actions */}
-            <div className="p-4 border-t border-dash-border bg-dash-canvas flex items-center justify-between gap-3">
-              <button 
-                onClick={() => { setSelectedServiceRequest(null); setNewRemarkText(""); }} 
-                className="px-4 py-2 bg-dash-surface border border-dash-border hover:bg-dash-surface-hover rounded-lg text-xs font-semibold text-dash-text transition-colors"
-              >
-                Close Drawer
-              </button>
-
-              <div className="flex items-center gap-2">
-                {selectedServiceRequest.status === "pending" && (
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateServiceStatus(selectedServiceRequest.id, "preparing")}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
-                  >
-                    Start Request &rarr;
-                  </button>
-                )}
-                {selectedServiceRequest.status === "preparing" && (
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateServiceStatus(selectedServiceRequest.id, "completed")}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
-                  >
-                    <Check className="w-3.5 h-3.5" /> Mark Completed
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );

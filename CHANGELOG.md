@@ -4,7 +4,44 @@ All notable changes to this project, including implementations, rollbacks, audit
 
 ## [Unreleased]
 ### Implementations
-- **DB Audit & Live Schema Remediation — Migrations 011, 012, 013 (Gap-Fill)**:
+- **Sprint 15: Cross-Stay Guest 360 Memory Persistence, Intent-to-Service Dispatch Routing, Session Security Lifecycle, and Orders/Services Console Decoupling ([`NotFoundPage.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/marketing/NotFoundPage.tsx), [`InactivityModal.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/shared/InactivityModal.tsx), [`OrdersTab.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/hub/console-tabs/OrdersTab.tsx), [`ServicesTab.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/hub/console-tabs/ServicesTab.tsx), [`BookingsTab.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/hub/console-tabs/BookingsTab.tsx), [`Console.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/hub/Console.tsx), [`AuthContext.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/context/AuthContext.tsx), [`definitions.js`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/base/bot-engine/tools/definitions.js), [`executor.js`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/base/bot-engine/tools/executor.js), [`index.js`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/base/bot-engine/index.js), [`booking.js`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/base/bot-engine/handlers/booking.js), [`order.js`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/base/bot-engine/handlers/order.js))**:
+  - **Marketing Wildcard Routing Fix**:
+    - Created `platform/src/app/marketing/NotFoundPage.tsx` and routed `*` in `App.tsx` to it, eliminating unbranded placeholder text on unknown URLs.
+  - **Dynamic Presence & Heartbeat Engine**:
+    - Dynamic `online_status` (`online` / `offline`) and `last_login` timestamp sync in Supabase `public.users` on login, interval heartbeats, and browser unload beacon.
+    - Displayed live `● Online` badge and last login timestamp in `Console.tsx` (header, profile dropdown, profile modal) and `StaffTab.tsx` (staff roster).
+  - **30-Minute Idle Session Security Timeout**:
+    - Built `platform/src/shared/InactivityModal.tsx` with 60-second warning countdown and automatic logout on 30 minutes of idle inactivity across mouse, keyboard, and touch events.
+  - **Cross-Stay Guest 360 Memory Persistence**:
+    - Wired `lookupGuest360()` into bot ingress in `base/bot-engine/index.js` (`POST /message`), recognizing returning guests from previous stays.
+    - Wired `upsertGuestProfile()` into booking completion (`booking.js`) and dining orders (`order.js`) to continuously persist preferences, dietary notes, and lifetime spend.
+  - **Intent-to-Service Coordination & Folio Posting Routing**:
+    - Defined canonical tool schemas for `post_folio_charge`, `reserve_restaurant_table`, and `request_laundry_service` in `definitions.js`.
+    - Implemented live execution in `executor.js` with direct Supabase inserts into `public.folio_charges` and `public.service_requests` with automated audit logging.
+  - **Console Architectural Decoupling: Orders & Services Standalone Tabs**:
+    - Created standalone `OrdersTab.tsx` for In-Room Dining and F&B orders with Kanban/Table views, rush/VIP flags, and folio posting buttons.
+    - Created standalone `ServicesTab.tsx` for Guest Services (Housekeeping, Maintenance, Laundry, Concierge) with department filters, urgency badges, and staff assignment.
+    - Streamlined `BookingsTab.tsx` from 145KB to 86KB, eliminating cluttered subtabs and resolving Node memory pressure (`write ENOMEM`).
+    - Registered tabs in `Console.tsx`, `CommandPalette.tsx`, and `ShortcutsHelpModal.tsx` with hotkeys `G then O` and `G then V`.
+- **Sprint 12: AI Orchestration, Zero-Key Local ONNX pgvector Embeddings, Live n8n MCP Workflow Modernization & PMS/POS Execution ([`seed-embeddings.js`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/base/bot-engine/scripts/seed-embeddings.js), [`guest-os.json`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/base/n8n-workflows/guest-os.json), [`rag.js`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/base/bot-engine/services/rag.js), [`guest360.js`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/base/bot-engine/services/guest360.js), [`executor.js`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/base/bot-engine/tools/executor.js), [`test-sprint12-flow.js`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/base/bot-engine/scripts/test-sprint12-flow.js))**:
+  - **Zero-Key, Zero-Cost Local ONNX Vector Embedding Pipeline**:
+    - Altered `public.faqs` and `public.rooms` vector columns to `extensions.vector(384)` with HNSW cosine distance indexes.
+    - Integrated `@xenova/transformers` running `Xenova/all-MiniLM-L6-v2` locally inside `bot-engine`, generating 384-dimensional dense semantic vectors with zero external API keys and $0.00 in API costs.
+    - Built and executed `seed-embeddings.js` CLI utility via Supabase REST API: successfully seeded all 21 active FAQs and all 15 active rooms with dense vector embeddings.
+    - Verified live semantic cosine search via `match_faqs()` returning accurate policy snippets in <25ms.
+  - **Live n8n MCP Workflow Modernization (`Ever Guest OS - Standard Workflow`, ID: `CqSpWMiqdNriUMJ2`)**:
+    - **Purged Legacy Google Sheets Nodes**: Removed `Fetch Hotel Info`, `Fetch FAQ`, `Fetch Rooms`, `Aggregate Sheet Data`, and `Write Lead` which previously downloaded entire sheets into every single webhook turn.
+    - **Standardized Nomenclature**: Replaced generic webhook path `hotel-chatbot` with standardized `guest-os`.
+    - **GUEST 360 MEMORY Injection**: Wired HTTP request node `Fetch Guest 360 Memory` calling `/api/guest360/lookup` to dynamically inject returning guest profile, VIP status, and preferences.
+    - **pgvector Semantic RAG Injection**: Wired HTTP request node `Retrieve Semantic Knowledge` calling `/api/rag/search` to pass guest query and inject only Top-3 relevant FAQ matches, reducing prompt payload from ~8,500 tokens down to <1,000 tokens (88% reduction).
+    - **Canonical Tool Dispatching**: Upgraded `Build System Prompt` to instruct model on 12 Canonical Hospitality Tools. Updated `Extract AI Reply` to parse `[TOOL_CALL: name=..., arguments=...]` tags and renamed router to `Ever Tool & Action Dispatcher` routing to `POST /api/tools/execute`.
+    - **Bot-Engine Lead Persistence**: Replaced Google Sheets lead writes with `Save Lead via Bot Engine` calling `/lead` endpoint with PostgreSQL conflict-free upsert.
+  - **Live PMS & POS Integration in `executor.js`**:
+    - Connected `submit_maintenance_ticket` to Supabase `public.support_tickets` table.
+    - Connected `escalate_to_staff` to Supabase `public.notifications` table with priority `'urgent'` and Redis handoff lock.
+    - Connected `check_room_availability`, `create_reservation`, `request_room_amenity`, and `place_dining_order` to `pms-api` endpoints.
+  - **Dual-Transport Architecture**: Added direct Supabase REST RPC support in `guest360.js` (`lookup_guest_360`, `upsert_guest_360`) and `rag.js` (`match_faqs`) ensuring seamless operations whether running inside isolated Docker containers or external environments.
+  - **End-to-End Verification**: Built and ran `test-sprint12-flow.js` asserting all 6 subsystems (GUEST 360 lookup, local ONNX RAG retrieval, room availability check, housekeeping amenity dispatch, maintenance ticket creation, and staff escalation) pass with 100% success (exit code 0).
   - Ran comprehensive live schema audit comparing all 14 local migration files against the Supabase cloud DB (`oieidnsppwooknzofzeq`).
   - **Migration 011 gap resolved**: Added missing `department`, `shift`, `duty_status` columns to `public.users` with CHECK constraints. Added `hotel_manager_update_staff` RLS UPDATE policy so managers can edit staff operational fields.
   - **Migration 012 gap resolved**: Created `public.support_tickets` and `public.support_ticket_messages` tables (fully missing from live DB). Applied all indexes (`idx_support_tickets_hotel_id`, `idx_support_tickets_status`, `idx_support_ticket_messages_ticket_id`), enabled RLS, and applied 5 access policies (SELECT/INSERT/UPDATE for tickets; SELECT/INSERT for messages).

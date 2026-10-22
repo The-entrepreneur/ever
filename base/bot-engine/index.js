@@ -40,6 +40,25 @@ app.post('/message', async (req, res) => {
       session = { stage: 'start', data: {}, history: [] };
     }
 
+    // ── GUEST 360 PERSISTENT CROSS-STAY MEMORY RESOLUTION ──────────────
+    // Recognize returning guests across past stays using phone or sender_id
+    const guest360 = require('./services/guest360');
+    if (!session.data.guest360 && (sender_id || session_id)) {
+      try {
+        const guestProfile = await guest360.lookupGuest360(
+          hotel_slug || process.env.HOTEL_ID, 
+          sender_id || session_id
+        );
+        if (guestProfile) {
+          session.data.guest360 = guestProfile;
+          session.data.guest360Context = guest360.formatGuest360Context(guestProfile);
+          console.log(`[BotEngine] Returning guest recognized: ${guestProfile.full_name} (${guestProfile.vip_tier || 'standard'}) - ${guestProfile.stay_count || 1} past stay(s)`);
+        }
+      } catch (err) {
+        console.warn('[BotEngine] Guest 360 resolution warning:', err.message);
+      }
+    }
+
     // Route through HCA if any intent flag is present; otherwise use GCE route
     const isHCARequest = order_intent || service_intent || booking_intent;
     const reply = isHCARequest

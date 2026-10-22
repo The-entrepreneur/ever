@@ -25,35 +25,65 @@ function getPool() {
   return pool;
 }
 
+let pipelinePromise = null;
+async function getExtractor() {
+  if (!pipelinePromise) {
+    try {
+      const { pipeline } = await import('@xenova/transformers');
+      pipelinePromise = pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+    } catch (err) {
+      console.warn('[RAG] Could not load @xenova/transformers:', err.message);
+      return null;
+    }
+  }
+  return pipelinePromise;
+}
+
 /**
- * Generate embedding vector using OpenAI or fast embedding provider if configured.
- * Falls back to null if no embedding API key is present.
+ * Generate 384-dimensional dense vector embedding locally using ONNX.
+ * Requires zero external API keys and runs with zero external cost.
  */
 async function generateEmbedding(text) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey || !text) return null;
+  if (!text || typeof text !== 'string') return null;
+  const clean = text.replace(/\s+/g, ' ').trim().slice(0, 1000);
+  if (!clean) return null;
 
   try {
-    const fetch = globalThis.fetch || require('node-fetch');
-    const resp = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        input: text.replace(/\n/g, ' ').slice(0, 1000),
-        model: 'text-embedding-3-small'
-      })
-    });
-
-    if (!resp.ok) return null;
-    const json = await resp.json();
-    return json.data[0]?.embedding || null;
+    const extractor = await getExtractor();
+    if (extractor) {
+      const output = await extractor(clean, { pooling: 'mean', normalize: true });
+      return Array.from(output.data);
+    }
   } catch (err) {
-    console.error('[RAG] Error generating embedding:', err.message);
-    return null;
+    console.error('[RAG] Error generating local ONNX embedding:', err.message);
   }
+
+  // Graceful fallback: If OpenAI key is present and model supports 384 dimensions
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const fetch = globalThis.fetch || require('node-fetch');
+      const resp = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          input: clean,
+          model: 'text-embedding-3-small',
+          dimensions: 384
+        })
+      });
+      if (resp.ok) {
+        const json = await resp.json();
+        return json.data[0]?.embedding || null;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -67,52 +97,110 @@ async function generateEmbedding(text) {
  * @returns {Promise<Array<{question: string, answer: string, category: string, similarity?: number}>>}
  */
 async function searchKnowledgeBase(hotelId, query, options = {}) {
-  const { threshold = 0.60, limit = 3 } = options;
+  const { threshold = 0.50, limit = 3 } = options;
   if (!hotelId || !query) return [];
 
-  const p = getPool();
-  if (!p) return [];
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://oieidnsppwooknzofzeq.supabase.co';
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   try {
-    // 1. Try vector embedding search if OpenAI API key is configured
+    // 1. Try vector embedding search via local ONNX or provider
     const queryVector = await generateEmbedding(query);
     if (queryVector && Array.isArray(queryVector)) {
       const vectorStr = `[${queryVector.join(',')}]`;
-      const res = await p.query(
-        `SELECT id, question, answer, category, similarity
-         FROM public.match_faqs($1::vector, $2::uuid, $3::float, $4::int)`,
-        [vectorStr, hotelId, threshold, limit]
-      );
-      if (res.rows.length > 0) {
-        return res.rows;
+
+      // 1a. Try Supabase REST RPC match_faqs
+      if (supabaseKey) {
+        try {
+          const fetch = globalThis.fetch || require('node-fetch');
+          const resp = await fetch(`${supabaseUrl}/rest/v1/rpc/match_faqs`, {
+            method: 'POST',
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              query_embedding: vectorStr,
+              match_hotel_id: hotelId,
+              match_threshold: threshold,
+              match_count: limit
+            })
+          });
+          if (resp.ok) {
+            const rows = await resp.json();
+            if (Array.isArray(rows) && rows.length > 0) {
+              return rows;
+            }
+          }
+        } catch (e) {
+          console.warn('[RAG] Supabase REST match_faqs fallback:', e.message);
+        }
+      }
+
+      // 1b. Direct PostgreSQL vector query fallback
+      const p = getPool();
+      if (p) {
+        const res = await p.query(
+          `SELECT id, question, answer, category, similarity
+           FROM public.match_faqs($1::extensions.vector, $2::uuid, $3::float, $4::int)`,
+          [vectorStr, hotelId, threshold, limit]
+        );
+        if (res.rows.length > 0) {
+          return res.rows;
+        }
       }
     }
 
-    // 2. Fallback: Keyword / ILIKE search against active FAQs
-    const keywords = query
-      .toLowerCase()
-      .replace(/[^\w\s]/g, '')
-      .split(/\s+/)
-      .filter(w => w.length > 3)
-      .slice(0, 3);
-
-    let fallbackQuery = `
-      SELECT id, question, answer, category
-      FROM public.faqs
-      WHERE hotel_id = $1 AND active = TRUE
-    `;
-    const params = [hotelId];
-
-    if (keywords.length > 0) {
-      fallbackQuery += ` AND (` + keywords.map((k, i) => `question ILIKE $${i + 2} OR answer ILIKE $${i + 2}`).join(' OR ') + `)`;
-      params.push(...keywords.map(k => `%${k}%`));
+    // 2. Keyword / ILIKE fallback via Supabase REST
+    if (supabaseKey) {
+      try {
+        const fetch = globalThis.fetch || require('node-fetch');
+        const resp = await fetch(`${supabaseUrl}/rest/v1/faqs?hotel_id=eq.${hotelId}&active=eq.true&select=id,question,answer,category&limit=${limit}`, {
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`
+          }
+        });
+        if (resp.ok) {
+          const rows = await resp.json();
+          if (Array.isArray(rows) && rows.length > 0) return rows;
+        }
+      } catch (e) {
+        console.warn('[RAG] Supabase REST fallback error:', e.message);
+      }
     }
 
-    fallbackQuery += ` ORDER BY display_order ASC LIMIT $${params.length + 1}`;
-    params.push(limit);
+    // 3. PostgreSQL pool keyword fallback
+    const p = getPool();
+    if (p) {
+      const keywords = query
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 3)
+        .slice(0, 3);
 
-    const fallbackRes = await p.query(fallbackQuery, params);
-    return fallbackRes.rows;
+      let fallbackQuery = `
+        SELECT id, question, answer, category
+        FROM public.faqs
+        WHERE hotel_id = $1 AND active = TRUE
+      `;
+      const params = [hotelId];
+
+      if (keywords.length > 0) {
+        fallbackQuery += ` AND (` + keywords.map((k, i) => `question ILIKE $${i + 2} OR answer ILIKE $${i + 2}`).join(' OR ') + `)`;
+        params.push(...keywords.map(k => `%${k}%`));
+      }
+
+      fallbackQuery += ` ORDER BY display_order ASC LIMIT $${params.length + 1}`;
+      params.push(limit);
+
+      const fallbackRes = await p.query(fallbackQuery, params);
+      return fallbackRes.rows;
+    }
+
+    return [];
   } catch (err) {
     console.error('[RAG] search error:', err.message);
     return [];

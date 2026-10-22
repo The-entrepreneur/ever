@@ -120,6 +120,21 @@ const handle = async (session, message, channel, senderId, hotelSlug, lang) => {
         channel: channel,
       });
 
+      // ── GUEST 360 MEMORY PERSISTENCE ──────────────────────────────────────────
+      // Persist profile to public.guests so returning guests are remembered forever
+      const guest360 = require('../services/guest360');
+      try {
+        await guest360.upsertGuestProfile(hotelSlug || process.env.HOTEL_ID, {
+          fullName: session.data.guestName,
+          email: session.data.email,
+          phone: session.data.phone || senderId,
+          roomPreference: session.data.selectedRoom?.type || null,
+          channel: channel
+        });
+      } catch (err) {
+        console.warn('[BookingHandler] Guest 360 memory save fallback:', err.message);
+      }
+
       return `Your ${session.data.selectedRoom.type} room is held for 15 minutes.\n\nBooking Reference: ${bookingRef}\n\nPlease complete payment here to confirm your reservation:\n${booking.payment_link || process.env.HOTEL_BOOKING_URL}\n\nTotal: £${booking.total}`;
     }
 
