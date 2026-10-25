@@ -34,6 +34,7 @@ export function LoginPage() {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -56,15 +57,9 @@ export function LoginPage() {
 
       setSuccess(true);
       
-      // Navigate based on role metadata
       setTimeout(() => {
-        const role = data.user.user_metadata?.role || "hotel_receptionist";
-        if (role === "super_admin" || role === "agency_staff") {
-          navigate("/agency");
-        } else {
-          navigate("/console");
-        }
-      }, 1000);
+        navigate("/console");
+      }, 800);
       
     } catch (err: any) {
       setError(err.message || "Failed to log in");

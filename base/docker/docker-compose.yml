@@ -1,7 +1,8 @@
 # ─────────────────────────────────────────────────────────────
-# Docker Compose — Level 2 Growth
-# Runs: n8n + bot-engine + Redis per client
-# Usage: docker-compose -f clients/[slug]/docker-compose.yml up -d
+# Docker Compose — EVER Guest OS
+# Runs: n8n + bot-engine + pms-api + Redis per hotel tenant
+# Data Layer: Supabase (Agency Cloud) as single source of truth
+# Usage: docker compose -f base/docker/docker-compose.yml up --build
 # ─────────────────────────────────────────────────────────────
 
 version: '3.8'
@@ -14,12 +15,12 @@ services:
     restart: unless-stopped
     ports:
       - '${N8N_PORT}:5678'
-    env_file: .env
+    env_file: ../.env
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
-      - N8N_HOST=${HOTEL_SLUG}.youragency.com
+      - N8N_HOST=${HOTEL_SLUG}.getever.com.ng
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
       - WEBHOOK_URL=${WEBHOOK_BASE_URL}
@@ -29,7 +30,6 @@ services:
       - EXECUTIONS_DATA_SAVE_ON_ERROR=all
     volumes:
       - n8n_data_${HOTEL_SLUG}:/home/node/.n8n
-      - ./data/faq.json:/home/node/data/faq.json:ro
       - ./credentials:/home/node/credentials:ro
     depends_on:
       redis:
@@ -41,16 +41,23 @@ services:
 
   bot-engine:
     build:
-      context: ../../base/bot-engine
+      context: ../bot-engine
       dockerfile: Dockerfile
     image: hotel-bot-engine:latest
     container_name: bot_${HOTEL_SLUG}
     restart: unless-stopped
     ports:
       - '${BOT_ENGINE_PORT}:3001'
-    env_file: .env
+    env_file: ../.env
+    environment:
+      - HOTEL_SLUG=${HOTEL_SLUG}
+      - BOT_ENGINE_PORT=3001
+      - REDIS_URL=redis://redis_${HOTEL_SLUG}:6379
+      - PMS_API_BASE_URL=http://pms_${HOTEL_SLUG}:8000
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     volumes:
-      - ./data/rooms.json:/app/data/rooms.json:ro
       - ./credentials:/app/credentials:ro
     depends_on:
       redis:
@@ -62,12 +69,14 @@ services:
 
   pms-api:
     build:
-      context: ../../base/pms-api
+      context: ../pms-api
       dockerfile: Dockerfile
     image: hotel-pms-api:latest
     container_name: pms_${HOTEL_SLUG}
     restart: unless-stopped
-    env_file: .env
+    ports:
+      - '${PMS_PORT:-8000}:8000'
+    env_file: ../.env
     environment:
       - PMS_DATABASE_URL=${PMS_DATABASE_URL}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
@@ -77,8 +86,8 @@ services:
       - FLUTTERWAVE_SECRET_HASH=${FLUTTERWAVE_SECRET_HASH}
       - HOTEL_NAME=${HOTEL_NAME}
       - WEBHOOK_BASE_URL=${WEBHOOK_BASE_URL}
-    volumes:
-      - ./data/rooms.json:/app/data/rooms.json:ro
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
       interval: 30s

@@ -733,7 +733,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "noreply@youragency.com",
+        "fromEmail": "noreply@getever.com.ng",
         "toEmail": "={{ $('Extract AI Reply').item.json.hotelInfo && $('Extract AI Reply').item.json.hotelInfo.rep_email || '' }}",
         "subject": "={{ '\\ud83d\\udea8 Guest Needs Assistance \\u2014 ' + $('Extract AI Reply').item.json.hotel_slug + ' | ' + $('Extract AI Reply').item.json.channel }}",
         "options": {}

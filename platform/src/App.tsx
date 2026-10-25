@@ -41,6 +41,7 @@ import { Console } from "./app/hub/Console";
 import { AssistantWidget } from "./app/marketing/AssistantWidget";
 import { InteractiveDemo } from "./app/marketing/InteractiveDemo";
 import { AdminConsole } from "./app/admin/AdminConsole";
+import { AgencyLoginPage } from "./app/admin/AgencyLoginPage";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -71,6 +72,8 @@ function PageTitle() {
       "/login": "Login | Ever",
       "/console": "Console | Ever",
       "/agency": "Agency Command | Ever",
+      "/agency/login": "Agency Login | Ever",
+      "/admin": "Agency Command | Ever",
       "/demo": "Interactive Demo | Ever",
       "/support-guide": "Support Guide | Ever"
     };
@@ -103,13 +106,13 @@ import { NotFoundPage } from "./app/marketing/NotFoundPage";
 
 function AppLayout() {
   const location = useLocation();
-  const hideNavAndFooter = ["/status", "/login", "/signup", "/activate", "/support-guide", "/console", "/agency"].includes(location.pathname.replace(/\/$/, ""));
+  const hideNavAndFooter = ["/status", "/login", "/signup", "/activate", "/support-guide", "/console", "/agency", "/agency/login", "/admin"].includes(location.pathname.replace(/\/$/, ""));
   const { theme } = useTheme();
 
   // Force light mode on marketing pages
   useEffect(() => {
     const root = window.document.documentElement;
-    const isAppRoute = ["/console", "/agency"].includes(location.pathname.replace(/\/$/, ""));
+    const isAppRoute = ["/console", "/agency", "/agency/login", "/admin"].includes(location.pathname.replace(/\/$/, ""));
     
     if (!isAppRoute) {
       root.classList.remove("dark");
@@ -149,15 +152,17 @@ function AppLayout() {
         <Route path="/activate" element={<ActivationPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/console" element={
-          <ProtectedRoute allowedRoles={["hotel_manager", "hotel_receptionist"]}>
+          <ProtectedRoute allowedRoles={["hotel_manager", "hotel_receptionist", "super_admin", "agency_staff"]}>
             <Console />
           </ProtectedRoute>
         } />
+        <Route path="/agency/login" element={<AgencyLoginPage />} />
         <Route path="/agency" element={
           <ProtectedRoute allowedRoles={["super_admin", "agency_staff"]}>
             <AdminConsole />
           </ProtectedRoute>
         } />
+        <Route path="/admin" element={<Navigate to="/agency" replace />} />
         <Route path="/demo" element={<InteractiveDemo />} />
         <Route path="/support-guide" element={<SupportGuide />} />
         <Route path="*" element={<NotFoundPage />} />

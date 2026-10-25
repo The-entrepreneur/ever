@@ -918,11 +918,12 @@ export function Console() {
                     </div>
                     <div className="border-t border-dash-border-hairline py-1">
                       <button 
-                        onClick={() => {
+                        onClick={async () => {
                           setIsProfileOpen(false);
-                          navigate("/login");
+                          await signOut();
+                          navigate("/login", { replace: true });
                         }}
-                        className="w-full text-left px-4 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
+                        className="w-full text-left px-4 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors cursor-pointer"
                       >
                         <LogOut className="w-4 h-4" /> Log out
                       </button>

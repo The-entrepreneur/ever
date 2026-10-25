@@ -1234,7 +1234,7 @@ export function AnalyticsTab({ onNavigate }: AnalyticsTabProps) {
   }, []);
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-200">
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">
       
       {/* ── Header Title & Master Control Bar ───────────────────────────────── */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-dash-border">
@@ -1246,7 +1246,6 @@ export function AnalyticsTab({ onNavigate }: AnalyticsTabProps) {
             <div>
               <h1 className="text-base md:text-lg font-bold text-dash-text tracking-tight flex items-center gap-2">
                 Hospitality Intelligence &amp; Reporting Studio
-                {isLevel2 && <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#EA6639]/15 text-[#EA6639]">Level 2 Active</span>}
               </h1>
               <p className="text-xs text-dash-text-sec">Interactive multi-channel diagnostics, intent discovery, and report publishing.</p>
             </div>
@@ -1301,9 +1300,9 @@ export function AnalyticsTab({ onNavigate }: AnalyticsTabProps) {
             { id: "cockpit", label: "Executive Cockpit", icon: BarChart3 },
             { id: "intent", label: "Conversation & Intents", icon: Sparkles },
             { id: "sla", label: "Agent & Staff SLAs", icon: Clock },
-            { id: "revenue", label: "Commercial Yield (L2)", icon: DollarSign, isL2: true },
+            { id: "revenue", label: "Commercial Yield & Attribution", icon: DollarSign },
             { id: "builder", label: "Report Builder Studio", icon: Printer },
-          ].filter(t => !t.isL2 || isLevel2).map((tab, idx, arr) => (
+          ].map((tab, idx, arr) => (
             <button
               key={tab.id}
               type="button"
@@ -1397,7 +1396,8 @@ export function AnalyticsTab({ onNavigate }: AnalyticsTabProps) {
 
           {/* Primary Volume & Resolution Trend Chart */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-            <InteractiveChartCard
+            <div className="xl:col-span-2">
+              <InteractiveChartCard
               title="Message Volume & Resolution Breakdown"
               subtitle="Drag the scrubber below to zoom in on specific spikes, weekends, or dates."
               data={displayData}
@@ -1422,6 +1422,7 @@ export function AnalyticsTab({ onNavigate }: AnalyticsTabProps) {
                 ]
               })}
             />
+          </div>
 
             {/* Channel Traffic Share Donut & MoM Trends */}
             <div className="bg-dash-surface p-4 md:p-5 rounded-xl border border-dash-border shadow-xs flex flex-col justify-between">

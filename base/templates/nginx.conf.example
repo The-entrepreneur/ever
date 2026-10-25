@@ -6,7 +6,7 @@
 
 server {
     listen 80;
-    server_name CLIENT_SLUG.youragency.com;
+    server_name CLIENT_SLUG.getever.com.ng;
 
     location /api/ {
         proxy_pass http://localhost:BOT_ENGINE_PORT;
@@ -32,4 +32,4 @@ server {
     }
 }
 # After creating this config, run:
-# certbot --nginx -d CLIENT_SLUG.youragency.com
+# certbot --nginx -d CLIENT_SLUG.getever.com.ng

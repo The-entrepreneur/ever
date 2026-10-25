@@ -239,12 +239,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, showInactivityModal]);
 
   const signOut = async () => {
-    if (user?.id) {
-      await updatePresence(user.id, false, false);
+    try {
+      if (user?.id) {
+        await updatePresence(user.id, false, false);
+      }
+    } catch (e) {
+      console.warn("[AuthContext] Failed to mark user offline:", e);
     }
-    sessionStorage.removeItem("ever_sandbox_data_v2");
+
+    // Immediately reset in-memory state
+    setUser(null);
+    setSession(null);
+    setRole("guest");
+    setHotelId(null);
+    setSubscriptionStatus("unsubscribed");
+    setIsOnline(false);
+    setLastLogin(null);
     setShowInactivityModal(false);
-    await supabase.auth.signOut();
+
+    // Completely clear persistent and session storage
+    sessionStorage.removeItem("ever_sandbox_data_v2");
+    sessionStorage.clear();
+    
+    // Clear Supabase auth keys from localStorage
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith("sb-") || key.includes("supabase") || key.startsWith("ever_session"))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch (err) {
+      console.warn("[AuthContext] Error purging localStorage auth keys:", err);
+    }
+
+    try {
+      await supabase.auth.signOut({ scope: "global" });
+    } catch (err) {
+      console.warn("[AuthContext] Supabase signOut error:", err);
+    }
   };
 
   const handleStaySignedIn = () => {

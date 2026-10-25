@@ -114,7 +114,7 @@ app.post('/api/webhook/openbsp', async (req, res) => {
     }
 
     // 3. Forward the optimized payload to the internal n8n container
-    const n8nUrl = `http://n8n_${hotelSlug}:5678/webhook/hotel-chatbot`;
+    const n8nUrl = `http://n8n_${hotelSlug}:5678/webhook/guest-os`;
     const response = await fetch(n8nUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -177,7 +177,7 @@ app.post('/payment/confirm', async (req, res) => {
 
     const tracker = require('./services/tracker');
     await tracker.logBookingEvent(
-      process.env.HOTEL_SLUG || 'grand-horizon',
+      process.env.HOTEL_SLUG || 'hotel',
       booking_id,
       session.data.guestName || 'Guest',
       (session.data.selectedRoom && session.data.selectedRoom.type) || 'Room',
