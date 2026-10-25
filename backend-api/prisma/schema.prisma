@@ -65,10 +65,13 @@ model bookings {
   total_amount      Decimal?  @db.Decimal(10, 2)
   status            String?   @db.VarChar(50)
   created_at        DateTime? @default(now()) @db.Timestamp(6)
+  guest_id          String?   @db.Uuid
+  guests            guests?   @relation(fields: [guest_id], references: [id], onUpdate: NoAction)
   hotels            hotels?   @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([check_in, check_out], map: "idx_bookings_dates")
   @@index([hotel_id], map: "idx_bookings_hotel_id")
+  @@index([guest_id], map: "idx_bookings_guest_id")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -142,16 +145,19 @@ model dsr_requests {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model faqs {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  hotel_id      String?   @db.Uuid
+  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hotel_id      String?                @db.Uuid
   question      String
   answer        String
-  category      String?   @db.VarChar(100)
-  active        Boolean?  @default(true)
-  display_order Int?      @default(0)
-  created_at    DateTime? @default(now()) @db.Timestamp(6)
-  updated_at    DateTime? @default(now()) @db.Timestamp(6)
-  hotels        hotels?   @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  category      String?                @db.VarChar(100)
+  active        Boolean?               @default(true)
+  display_order Int?                   @default(0)
+  created_at    DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?              @default(now()) @db.Timestamp(6)
+  embedding     Unsupported("vector")?
+  hotels        hotels?                @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([embedding], map: "idx_faqs_embedding_hnsw")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -223,6 +229,7 @@ model hotels {
   faqs                 faqs[]
   feedback             feedback[]
   folio_charges        folio_charges[]
+  guests               guests[]
   handoff_sessions     handoff_sessions[]
   knowledge_embeddings knowledge_embeddings[]
   knowledge_sources    knowledge_sources[]
@@ -237,6 +244,7 @@ model hotels {
   rooms                rooms[]
   service_requests     service_requests[]
   subscriptions        subscriptions[]
+  support_tickets      support_tickets[]
   upsells              upsells[]
   users                users[]
   whatsapp_accounts    whatsapp_accounts[]
@@ -351,8 +359,13 @@ model notifications {
   read       Boolean?  @default(false)
   link       String?   @db.VarChar(255)
   created_at DateTime? @default(now()) @db.Timestamp(6)
+  priority   String    @default("normal") @db.VarChar(20)
   hotels     hotels?   @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users      users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_notifications_created_at")
+  @@index([hotel_id], map: "idx_notifications_hotel_id")
+  @@index([read], map: "idx_notifications_read")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -371,11 +384,14 @@ model orders {
   notes         String?
   created_at    DateTime?       @default(now()) @db.Timestamp(6)
   updated_at    DateTime?       @db.Timestamp(6)
+  guest_id      String?         @db.Uuid
   folio_charges folio_charges[]
+  guests        guests?         @relation(fields: [guest_id], references: [id], onUpdate: NoAction)
   hotels        hotels?         @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([hotel_id], map: "idx_orders_hotel_id")
   @@index([status], map: "idx_orders_status")
+  @@index([guest_id], map: "idx_orders_guest_id")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -393,19 +409,22 @@ model push_subscriptions {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model rooms {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  hotel_id    String?   @db.Uuid
-  room_id     String?   @db.VarChar(50)
-  type        String?   @db.VarChar(100)
-  rate        Decimal?  @db.Decimal(10, 2)
+  id          String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hotel_id    String?                @db.Uuid
+  room_id     String?                @db.VarChar(50)
+  type        String?                @db.VarChar(100)
+  rate        Decimal?               @db.Decimal(10, 2)
   capacity    Int?
   description String?
   amenities   String[]
-  available   Boolean?  @default(true)
+  available   Boolean?               @default(true)
   image_urls  String[]
-  created_at  DateTime? @default(now()) @db.Timestamp(6)
-  updated_at  DateTime? @default(now()) @db.Timestamp(6)
-  hotels      hotels?   @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  created_at  DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at  DateTime?              @default(now()) @db.Timestamp(6)
+  embedding   Unsupported("vector")?
+  hotels      hotels?                @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([embedding], map: "idx_rooms_embedding_hnsw")
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -485,9 +504,13 @@ model users {
   business_address       String?
   property_type          String?              @db.VarChar(100)
   pms                    String?              @db.VarChar(100)
+  department             String?              @db.VarChar(50)
+  shift                  String?              @db.VarChar(20)
+  duty_status            String?              @db.VarChar(20)
   audit_log              audit_log[]
   notifications          notifications[]
   push_subscriptions     push_subscriptions[]
+  support_tickets        support_tickets[]
   hotels                 hotels?              @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
@@ -541,6 +564,76 @@ model knowledge_sources {
   updated_at           DateTime?              @default(now()) @db.Timestamp(6)
   knowledge_embeddings knowledge_embeddings[]
   hotels               hotels                 @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model guests {
+  id                   String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hotel_id             String     @db.Uuid
+  full_name            String     @db.VarChar(255)
+  first_name           String?    @db.VarChar(100)
+  last_name            String?    @db.VarChar(100)
+  email                String?    @db.VarChar(255)
+  phone                String?    @db.VarChar(50)
+  vip_tier             String     @default("standard") @db.VarChar(50)
+  stay_count           Int        @default(0)
+  total_spend          Decimal    @default(0.00) @db.Decimal(12, 2)
+  room_preferences     Json       @default("[]")
+  dietary_preferences  Json       @default("[]")
+  special_notes        String?
+  tags                 String[]   @default([])
+  last_stay_at         DateTime?  @db.Timestamptz(6)
+  last_contact_channel String?    @db.VarChar(50)
+  created_at           DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime   @default(now()) @db.Timestamptz(6)
+  bookings             bookings[]
+  hotels               hotels     @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  orders               orders[]
+
+  @@index([hotel_id, email], map: "idx_guests_email")
+  @@index([hotel_id], map: "idx_guests_hotel_id")
+  @@index([hotel_id, phone], map: "idx_guests_phone")
+  @@index([hotel_id, vip_tier], map: "idx_guests_vip")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model support_ticket_messages {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id       String?          @db.Uuid
+  sender_role     String           @default("hotel_staff") @db.VarChar(50)
+  sender_name     String           @db.VarChar(255)
+  sender_email    String?          @db.VarChar(255)
+  message         String
+  created_at      DateTime?        @default(now()) @db.Timestamptz(6)
+  support_tickets support_tickets? @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([ticket_id], map: "idx_support_ticket_messages_ticket_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model support_tickets {
+  id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hotel_id                String?                   @db.Uuid
+  creator_id              String?                   @db.Uuid
+  creator_name            String?                   @db.VarChar(255)
+  creator_email           String                    @db.VarChar(255)
+  category                String                    @default("General Inquiry") @db.VarChar(100)
+  priority                String                    @default("normal") @db.VarChar(50)
+  status                  String                    @default("open") @db.VarChar(50)
+  subject                 String                    @db.VarChar(255)
+  description             String
+  assigned_to             String?                   @default("Ever Engineering & Operations Desk") @db.VarChar(100)
+  created_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  support_ticket_messages support_ticket_messages[]
+  users                   users?                    @relation(fields: [creator_id], references: [id], onUpdate: NoAction)
+  hotels                  hotels?                   @relation(fields: [hotel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([hotel_id], map: "idx_support_tickets_hotel_id")
+  @@index([status], map: "idx_support_tickets_status")
 }
 
 enum booking_status {

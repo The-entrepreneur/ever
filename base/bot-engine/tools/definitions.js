@@ -241,6 +241,67 @@ const HOSPITALITY_TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'post_folio_charge',
+      description: 'Post an authenticated incidental, amenity, or service fee directly to an occupied guest room folio in the hotel PMS.',
+      parameters: {
+        type: 'object',
+        properties: {
+          room_number: { type: 'string', description: 'Occupied room number to charge.' },
+          amount: { type: 'number', description: 'Total charge amount in property local currency.' },
+          description: { type: 'string', description: 'Itemized description of the charge (e.g. "Laundry Wash & Press", "Minibar Restock").' },
+          category: {
+            type: 'string',
+            enum: ['dining', 'spa', 'laundry', 'minibar', 'late_checkout', 'transport', 'miscellaneous'],
+            description: 'Departmental revenue category.'
+          }
+        },
+        required: ['room_number', 'amount', 'description']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'reserve_restaurant_table',
+      description: 'Book a table reservation for an in-house or walk-in guest at the hotel restaurant.',
+      parameters: {
+        type: 'object',
+        properties: {
+          room_number: { type: 'string', description: 'Room number if in-house guest.' },
+          guest_name: { type: 'string', description: 'Primary contact name for the table reservation.' },
+          party_size: { type: 'integer', description: 'Number of dining guests.' },
+          reservation_date: { type: 'string', description: 'Date of reservation in YYYY-MM-DD format.' },
+          reservation_time: { type: 'string', description: 'Reservation time (e.g. "19:30" or "7:30 PM").' },
+          special_requests: { type: 'string', description: 'Dietary preferences, anniversary/birthday notes, or seating requests.' }
+        },
+        required: ['party_size', 'reservation_date', 'reservation_time']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'request_laundry_service',
+      description: 'Schedule a laundry or dry-cleaning pickup request from a guest room with specified turnaround tier.',
+      parameters: {
+        type: 'object',
+        properties: {
+          room_number: { type: 'string', description: 'Guest room number.' },
+          service_tier: {
+            type: 'string',
+            enum: ['standard_next_day', 'same_day_express', 'dry_clean_only', 'press_only'],
+            description: 'Turnaround speed and treatment type.'
+          },
+          items_description: { type: 'string', description: 'Description or quantity of garments (e.g. "2 suits, 4 dress shirts").' },
+          pickup_time: { type: 'string', description: 'Preferred pickup time.' }
+        },
+        required: ['room_number', 'service_tier']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'escalate_to_staff',
       description: 'Trigger a human handoff alert, notifying the on-duty manager or receptionist via WhatsApp and Email.',
       parameters: {

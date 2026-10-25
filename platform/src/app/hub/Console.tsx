@@ -31,7 +31,9 @@ import {
   Headphones,
   Search,
   Command,
-  Keyboard
+  Keyboard,
+  Utensils,
+  BellRing
 } from "lucide-react";
 import { useTheme } from "../../shared/ThemeProvider";
 import { supabase } from "../../lib/supabase";
@@ -51,6 +53,8 @@ import { AgentSettingsTab } from "./console-tabs/AgentSettingsTab";
 import { ChannelsTab } from "./console-tabs/ChannelsTab";
 import { StaffTab } from "./console-tabs/StaffTab";
 import { BookingsTab } from "./console-tabs/BookingsTab";
+import { OrdersTab } from "./console-tabs/OrdersTab";
+import { ServicesTab } from "./console-tabs/ServicesTab";
 import { AnalyticsTab } from "./console-tabs/AnalyticsTab";
 import { FeedbackTab } from "./console-tabs/FeedbackTab";
 import { ComplianceTab } from "./console-tabs/ComplianceTab";
@@ -81,7 +85,7 @@ export function Console() {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const { isSandbox, regenerate } = useSandbox();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "inbox" | "crm" | "knowledge_base" | "agent_settings" | "channels" | "staff" | "bookings" | "analytics" | "feedback" | "compliance" | "billing">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "inbox" | "crm" | "knowledge_base" | "agent_settings" | "channels" | "staff" | "bookings" | "orders" | "services" | "analytics" | "feedback" | "compliance" | "billing">("dashboard");
   const [inboxTargetId, setInboxTargetId] = useState<string | null>(null);
   
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
@@ -151,7 +155,7 @@ export function Console() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isSetupWizardOpen, setIsSetupWizardOpen] = useState(false);
 
-  const { user, hotelId, signOut } = useAuth();
+  const { user, hotelId, signOut, isOnline, lastLogin } = useAuth();
   const { showToast } = useToast();
   
   const [propertyProfile, setPropertyProfile] = useState({
@@ -179,7 +183,7 @@ export function Console() {
       return ["dashboard", "analytics"].includes(tabName);
     }
     if (role === "hotel_receptionist" || role.includes("receptionist")) {
-      return ["dashboard", "inbox", "crm", "bookings", "knowledge_base", "analytics", "feedback"].includes(tabName);
+      return ["dashboard", "inbox", "crm", "bookings", "orders", "services", "knowledge_base", "analytics", "feedback"].includes(tabName);
     }
     return true; // hotel_manager and others can access all
   };
@@ -295,6 +299,8 @@ export function Console() {
           i: "inbox",
           c: "crm",
           b: "bookings",
+          o: "orders",
+          v: "services",
           a: "analytics",
           f: "feedback",
           s: "staff",
@@ -489,6 +495,8 @@ export function Console() {
                 { tab: "inbox", label: "Live Inbox", icon: MessageSquare },
                 { tab: "crm", label: "Leads & CRM", icon: Users },
                 { tab: "bookings", label: "Bookings", icon: Calendar },
+                { tab: "orders", label: "Dining & Orders", icon: Utensils },
+                { tab: "services", label: "Guest Services", icon: BellRing },
                 { tab: "knowledge_base", label: "Knowledge Base", icon: BookOpen }
               ].filter(item => isTabAllowed(item.tab)).map((item) => (
                 <button
@@ -640,6 +648,8 @@ export function Console() {
               { tab: "inbox", label: "Live Inbox", icon: MessageSquare },
               { tab: "crm", label: "Leads & CRM", icon: Users },
               { tab: "bookings", label: "Bookings", icon: Calendar },
+              { tab: "orders", label: "Dining & Orders", icon: Utensils },
+              { tab: "services", label: "Guest Services", icon: BellRing },
               { tab: "knowledge_base", label: "Knowledge Base", icon: BookOpen }
             ].filter(item => isTabAllowed(item.tab)).map((item) => (
               <button 
@@ -814,19 +824,41 @@ export function Console() {
               <div className="relative ml-1" ref={profileRef}>
                 <button 
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  className="w-7 h-7 flex items-center justify-center rounded-md bg-dash-surface-raised border border-dash-border overflow-hidden focus:outline-none focus:ring-2 focus:ring-[#EA6639]" 
+                  className="w-7 h-7 flex items-center justify-center rounded-md bg-dash-surface-raised border border-dash-border overflow-hidden focus:outline-none focus:ring-2 focus:ring-[#EA6639] relative" 
                   title="Profile"
                 >
                   <div className="w-full h-full bg-[#EA6639]/10 text-[#EA6639] opacity-95 flex items-center justify-center text-[11px] font-bold uppercase">
-                    {propertyProfile.fullName.charAt(0)}
+                    {propertyProfile.fullName ? propertyProfile.fullName.charAt(0) : "U"}
                   </div>
+                  <span 
+                    className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-dash-surface ${
+                      isOnline ? "bg-emerald-500 shadow-xs shadow-emerald-500/50" : "bg-zinc-400"
+                    }`}
+                    title={isOnline ? "Online Now" : "Offline"}
+                  />
                 </button>
                 
                 {isProfileOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 bg-dash-surface border border-dash-border overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 mt-2 w-60 rounded-xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 bg-dash-surface border border-dash-border overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100">
                     <div className="px-4 py-3 border-b border-dash-border-hairline bg-dash-surface">
-                      <p className="text-xs font-semibold text-dash-text truncate">{propertyProfile.fullName}</p>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <p className="text-xs font-semibold text-dash-text truncate">{propertyProfile.fullName || "User"}</p>
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          isOnline ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" : "bg-zinc-500/10 text-zinc-500 border border-zinc-500/20"
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-zinc-400"}`} />
+                          {isOnline ? "Online" : "Offline"}
+                        </span>
+                      </div>
                       <p className="text-xs text-dash-text-sec truncate">{propertyProfile.email}</p>
+                      {lastLogin && (
+                        <p className="text-[10px] text-dash-text-muted mt-1.5 truncate flex items-center gap-1">
+                          <span className="opacity-70">Last login:</span>
+                          <span className="font-mono text-dash-text-sec">
+                            {new Date(lastLogin).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </p>
+                      )}
                     </div>
                     <div className="py-1">
                       <button 
@@ -886,11 +918,12 @@ export function Console() {
                     </div>
                     <div className="border-t border-dash-border-hairline py-1">
                       <button 
-                        onClick={() => {
+                        onClick={async () => {
                           setIsProfileOpen(false);
-                          navigate("/login");
+                          await signOut();
+                          navigate("/login", { replace: true });
                         }}
-                        className="w-full text-left px-4 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors"
+                        className="w-full text-left px-4 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 transition-colors cursor-pointer"
                       >
                         <LogOut className="w-4 h-4" /> Log out
                       </button>
@@ -913,6 +946,20 @@ export function Console() {
           {activeTab === "staff" && <StaffTab role={propertyProfile.role} />}
           {activeTab === "bookings" && (
             <BookingsTab 
+              role={propertyProfile.role} 
+              propertyName={propertyProfile.propertyName} 
+              onNavigate={handleNavigate as any} 
+            />
+          )}
+          {activeTab === "orders" && (
+            <OrdersTab 
+              role={propertyProfile.role} 
+              propertyName={propertyProfile.propertyName} 
+              onNavigate={handleNavigate as any} 
+            />
+          )}
+          {activeTab === "services" && (
+            <ServicesTab 
               role={propertyProfile.role} 
               propertyName={propertyProfile.propertyName} 
               onNavigate={handleNavigate as any} 
@@ -949,6 +996,31 @@ export function Console() {
                   <option value="hotel_receptionist">Hotel Receptionist</option>
                   <option value="hotel_readonly">Hotel Read-Only</option>
                 </select>
+              </div>
+
+              {/* Real-time Session & Presence Telemetry */}
+              <div className="p-3 rounded-lg bg-dash-canvas border border-dash-border space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-dash-text-muted">Presence Status:</span>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold ${
+                    isOnline 
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" 
+                      : "bg-zinc-500/10 text-zinc-500 border border-zinc-500/20"
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-zinc-400"}`} />
+                    {isOnline ? "Active Now (Online)" : "Offline"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-dash-text-muted">Last Authenticated Login:</span>
+                  <span className="font-mono text-[11px] text-dash-text">
+                    {lastLogin ? new Date(lastLogin).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Active Session"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-dash-text-muted">Session Timeout:</span>
+                  <span className="text-[11px] text-dash-text-sec">30 mins idle protection</span>
+                </div>
               </div>
               <div className="pt-2 flex justify-end gap-2">
                 <button type="button" onClick={() => setIsProfileModalOpen(false)} className="px-4 py-1.5 text-xs font-medium text-dash-text-sec hover:text-dash-text transition-colors">Cancel</button>

@@ -183,6 +183,20 @@ const handle = async (session, message, channel, senderId, hotelSlug, lang, orde
         session.data.orderId   = result.order_id;
         session.data.orderItems = [];
 
+        // ── GUEST 360 MEMORY PERSISTENCE ──────────────────────────────────────────
+        // Record dining activity and notes in guest longitudinal profile
+        const guest360 = require('../services/guest360');
+        try {
+          await guest360.upsertGuestProfile(hotelSlug || process.env.HOTEL_ID, {
+            fullName: session.data.guestName || `Guest Room ${session.data.roomNumber}`,
+            phone: senderId,
+            specialNotes: `Ordered ${items.map(i => i.name).join(', ')} to Room ${session.data.roomNumber} (Total: £${total.toFixed(2)})`,
+            channel: channel
+          });
+        } catch (err) {
+          console.warn('[OrderHandler] Guest 360 memory save fallback:', err.message);
+        }
+
         return `✅ *Order confirmed!*\n\nOrder Ref: *${result.order_ref || result.order_id}*\nEst. delivery: *${result.eta_minutes || 20}–${(result.eta_minutes || 20) + 10} mins* to Room ${session.data.roomNumber}\n\nIs there anything else I can help you with?`;
       } catch (err) {
         console.error('[OrderHandler] submitOrder error:', err.message);

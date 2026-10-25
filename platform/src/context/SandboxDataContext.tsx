@@ -50,7 +50,7 @@ export interface SandboxServiceRequest {
   service_type: string;
   details: { notes?: string; urgency?: "normal" | "urgent" };
   scheduled_for?: string | null;
-  status: "pending" | "preparing" | "completed";
+  status: "pending" | "preparing" | "in_progress" | "completed" | "cancelled";
   channel: string;
   guest_name?: string;
   assigned_staff?: string;
@@ -503,7 +503,7 @@ function generateSandboxData(hotelId: string, hotelName: string = "Dero Apartmen
   });
 
   // ── 6. Orders (60) & Service Requests (30) ────────────────────────────────
-  const ORDER_STATUSES = ["Pending", "Preparing", "Completed", "Completed", "Completed"];
+  const ORDER_STATUSES = ["pending", "preparing", "preparing", "delivered", "delivered", "delivered"];
   const orders: SandboxOrder[] = Array.from({ length: 60 }, () => {
     const fName = sample(FIRST_NAMES);
     const lName = sample(LAST_NAMES);
@@ -515,12 +515,12 @@ function generateSandboxData(hotelId: string, hotelName: string = "Dero Apartmen
     const totalAmt = orderItems.reduce((acc, item) => acc + (item.price || 20) * item.qty, 0);
     const status = sample(ORDER_STATUSES);
     const remarks: StaffRemark[] = [];
-    if (status === "Preparing" || status === "Completed") {
+    if (status === "preparing" || status === "delivered") {
       remarks.push({
         id: uid(),
         author: sample(["Kitchen Staff (Chef Marco)", "F&B Expeditor", "Front Desk"]),
         role: "kitchen",
-        content: status === "Completed" ? "Order prepared, packed, and delivered to room" : "Order acknowledged by kitchen, preparation in progress",
+        content: status === "delivered" ? "Order prepared, packed, and delivered to room" : "Order acknowledged by kitchen, preparation in progress",
         created_at: rDate(1)
       });
     }
@@ -549,20 +549,34 @@ function generateSandboxData(hotelId: string, hotelName: string = "Dero Apartmen
     };
   });
 
-  const SERVICE_TYPES = [
-    "Extra Towels & Linens", "Housekeeping Refresh", "Luggage Assistance", 
-    "AC / Temperature Check", "Late Check-out Assistance", "Extra Pillows"
+  const SERVICE_PRESETS = [
+    { type: "housekeeping", title: "Housekeeping Refresh", notes: "Full room refresh and fresh towel replenishment requested" },
+    { type: "housekeeping", title: "Extra Towels & Linens", notes: "Guest requested 2 extra bath sheets and hypoallergenic pillows" },
+    { type: "maintenance",  title: "AC / Temperature Calibration", notes: "Thermostat running cold; requested calibration to 22C" },
+    { type: "maintenance",  title: "Plumbing / Hot Water Check", notes: "Shower pressure low, engineering inspection requested" },
+    { type: "laundry",      title: "Dry Cleaning & Suit Press", notes: "2 suits and 1 dress for evening express pressing" },
+    { type: "laundry",      title: "Luggage Valet Assistance", notes: "Baggage collection assistance for morning departure" },
+    { type: "restaurant",   title: "Dinner Table Reservation", notes: "Table for 2 at The Grand Bistro for 8:00 PM" },
+    { type: "restaurant",   title: "Private Dining / Wine Pairing", notes: "Chef tasting menu reservation with wine pairing" },
+    { type: "wakeup",       title: "Morning Wake-Up Call", notes: "Automated wake-up call scheduled for 6:30 AM" },
+    { type: "wakeup",       title: "Airport Transit Wake-Up", notes: "Wake-up call + taxi notification at 5:00 AM" },
   ];
+
   const serviceRequests: SandboxServiceRequest[] = Array.from({ length: 30 }, () => {
     const fName = sample(FIRST_NAMES);
     const lName = sample(LAST_NAMES);
-    const status = sample(["pending", "preparing", "completed"]) as any;
+    const preset = sample(SERVICE_PRESETS);
+    const status = sample(["pending", "in_progress", "in_progress", "completed", "completed"]) as any;
+    const isUrgent = Math.random() > 0.75;
+    const assignedStaff = status === "pending"
+      ? (Math.random() > 0.5 ? "Unassigned" : sample(["Elena R. (Housekeeping)", "David K. (Maintenance)"]))
+      : sample(["Elena R. (Housekeeping)", "Marcus V. (Guest Services)", "David K. (Maintenance)", "Front Desk"]);
     const remarks: StaffRemark[] = [];
     if (status !== "pending") {
       remarks.push({
         id: uid(),
-        author: sample(["Elena R. (Housekeeping)", "Marcus V. (Guest Services)", "Sarah L. (Concierge)"]),
-        role: "housekeeping",
+        author: assignedStaff || "Staff Dispatcher",
+        role: preset.type,
         content: status === "completed" ? "Request fulfilled and verified with guest" : "Staff dispatched to room",
         created_at: rDate(1)
       });
@@ -573,20 +587,16 @@ function generateSandboxData(hotelId: string, hotelName: string = "Dero Apartmen
       session_id: `SR-${uid().slice(0, 8).toUpperCase()}`,
       room_number: `${rInt(1, 8)}0${rInt(1, 9)}`,
       guest_name: `${fName} ${lName}`,
-      service_type: sample(SERVICE_TYPES),
+      service_type: preset.type,
       details: {
-        notes: sample([
-          "Requested via AI digital concierge",
-          "Guest requested extra pillows and hypoallergenic linens",
-          "Guest requested luggage collection for 11:30 AM checkout",
-          "AC thermostat showing 24C, requested 20C calibration"
-        ]),
-        urgency: Math.random() > 0.7 ? "urgent" : "normal"
+        notes: preset.notes,
+        description: preset.title,
+        urgency: isUrgent ? "urgent" : "normal"
       },
       scheduled_for: new Date(now.getTime() + rInt(1, 4) * 3600000).toISOString(),
       status,
       channel: sample(CHANNELS),
-      assigned_staff: sample(["Elena R. (Housekeeping)", "Marcus V. (Guest Services)", "David K. (Maintenance)", "Front Desk"]),
+      assigned_staff: assignedStaff,
       staff_remarks: remarks,
       created_at: rDate(4),
     };

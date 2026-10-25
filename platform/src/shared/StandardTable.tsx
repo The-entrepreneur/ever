@@ -77,14 +77,13 @@ export function StandardTable<T>({
   stickyHeader = true,
   maxHeight = "100%",
 }: StandardTableProps<T>) {
-  const [internalDensity, setInternalDensity] = useState<TableDensity>("default");
-  const density = controlledDensity ?? internalDensity;
+  const [internalDensity, setInternalDensity] = useState<TableDensity>(controlledDensity ?? "default");
+  const density = onDensityChange && controlledDensity !== undefined ? controlledDensity : internalDensity;
 
   const handleDensityToggle = (newDensity: TableDensity) => {
+    setInternalDensity(newDensity);
     if (onDensityChange) {
       onDensityChange(newDensity);
-    } else {
-      setInternalDensity(newDensity);
     }
   };
 

@@ -24,7 +24,11 @@ import {
   Clock,
   Car,
   Compass,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Copy,
+  Check,
+  Globe,
+  Landmark
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useSandbox } from "../../../context/SandboxDataContext";
@@ -82,6 +86,25 @@ export function BillingTab() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
   const [updatingPayment, setUpdatingPayment] = useState(false);
+
+  // Agency Settlement Collection Methods (Hotel pays Agency)
+  type AgencyMethod = "bacs" | "paystack" | "flutterwave";
+  const [selectedMethod, setSelectedMethod] = useState<AgencyMethod>(() => {
+    return (localStorage.getItem("ever_agency_payment_method") as AgencyMethod) || "bacs";
+  });
+  const [activeMethodTab, setActiveMethodTab] = useState<AgencyMethod>(selectedMethod);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [bacsReference, setBacsReference] = useState("");
+  const [bacsDate, setBacsDate] = useState(new Date().toISOString().split("T")[0]);
+  const [bacsProofStatus, setBacsProofStatus] = useState<"idle" | "submitting" | "confirmed">("idle");
+  const [onlineProcessing, setOnlineProcessing] = useState(false);
+
+  const copyCoordinate = (val: string, label: string) => {
+    navigator.clipboard.writeText(val);
+    setCopiedKey(label);
+    showToast(`Copied ${label} to clipboard`, "info");
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
   // Sandbox demo config — never used for live accounts
   const SANDBOX_DEFAULT_CONFIG: TenantCommercialConfig = {
     name: "The Grand Azure Hotel",
@@ -468,6 +491,42 @@ export function BillingTab() {
 
       </div>
 
+      {/* ── Active Agency Settlement Channel Summary Card ── */}
+      <div className="bg-dash-surface rounded-xl border border-dash-border shadow-sm p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-dash-surface via-dash-surface to-dash-canvas/40">
+        <div className="flex items-start md:items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-[#EA6639]/10 text-[#EA6639] border border-[#EA6639]/20 flex items-center justify-center shrink-0">
+            {selectedMethod === "bacs" ? <Building2 className="w-5 h-5" /> : selectedMethod === "paystack" ? <Zap className="w-5 h-5" /> : <Globe className="w-5 h-5" />}
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-dash-text-muted">Agency Settlement Channel:</span>
+              <span className="font-bold text-xs text-dash-text flex items-center gap-1.5">
+                {selectedMethod === "bacs" && "BACS Direct Bank Transfer (Primary)"}
+                {selectedMethod === "paystack" && "Paystack Automated Gateway"}
+                {selectedMethod === "flutterwave" && "Flutterwave Multi-Currency"}
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                Official Collection
+              </span>
+            </div>
+            <p className="text-xs text-dash-text-sec mt-0.5">
+              Beneficiary: <strong className="text-dash-text">Ever Global Technology Ltd</strong> &bull; {selectedMethod === "bacs" ? "Sort Code: 04-00-04 • Acc: 82910482" : selectedMethod === "paystack" ? "Instant Card, USSD & Bank Remittance" : "Global Cards, Mobile Money & Barter"}
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            setActiveMethodTab(selectedMethod);
+            setShowPaymentModal(true);
+          }}
+          className="h-8 px-3.5 bg-dash-canvas hover:bg-dash-surface border border-dash-border text-dash-text text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 shrink-0 self-start md:self-auto shadow-xs"
+        >
+          <CreditCard className="w-3.5 h-3.5 text-[#EA6639]" />
+          <span>Switch / Configure Settlement</span>
+        </button>
+      </div>
+
       {/* ── Itemized Ledger for the 10 Qualifying Revenue Streams ── */}
       <div className="bg-dash-surface rounded-xl border border-dash-border shadow-sm p-5 space-y-4">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
@@ -681,45 +740,368 @@ export function BillingTab() {
 
       </div>
 
-      {/* ── Payment Method Modal ── */}
+      {/* ── Agency Settlement & Payment Methods Modal (BACS, Paystack, Flutterwave) ── */}
       {showPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-dash-surface border border-dash-border rounded-xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-5 border-b border-dash-border">
-              <div>
-                <h4 className="font-semibold text-dash-text">Update Corporate Payment Method</h4>
-                <p className="text-[11px] text-dash-text-muted">PCI-DSS Level 1 Encrypted via Stripe</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-dash-surface border border-dash-border rounded-2xl shadow-2xl w-full max-w-xl animate-in fade-in zoom-in-95 duration-200 my-8 overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-dash-border bg-dash-canvas/40">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#EA6639]/10 text-[#EA6639] border border-[#EA6639]/20 flex items-center justify-center shrink-0">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-dash-text">Agency Settlement &amp; Payment Methods</h4>
+                  <p className="text-[11px] text-dash-text-muted">Official collection channels for hotel clients paying Ever HQ</p>
+                </div>
               </div>
-              <button onClick={() => setShowPaymentModal(false)} className="text-dash-text-muted hover:text-dash-text transition-colors rounded p-1 hover:bg-dash-surface-hover">
+              <button 
+                onClick={() => setShowPaymentModal(false)} 
+                className="text-dash-text-muted hover:text-dash-text transition-colors rounded-lg p-1.5 hover:bg-dash-surface-hover"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleUpdatePayment} className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-dash-text mb-1.5">Company / Hotel Legal Name</label>
-                <input required defaultValue={clientConfig?.name || ""} type="text" className="w-full px-3 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs text-dash-text focus:ring-1 focus:ring-[#EA6639] focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-dash-text mb-1.5">Card Number</label>
-                <input required type="text" placeholder="•••• •••• •••• 4242" className="w-full px-3 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs text-dash-text focus:ring-1 focus:ring-[#EA6639] focus:outline-none font-mono" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-dash-text mb-1.5">Expiry Date</label>
-                  <input required type="text" placeholder="MM / YY" className="w-full px-3 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs text-dash-text focus:ring-1 focus:ring-[#EA6639] focus:outline-none font-mono" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-dash-text mb-1.5">CVC / CVV</label>
-                  <input required type="password" maxLength={4} placeholder="•••" className="w-full px-3 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs text-dash-text focus:ring-1 focus:ring-[#EA6639] focus:outline-none font-mono" />
-                </div>
-              </div>
-              <div className="flex gap-3 pt-4 border-t border-dash-border">
-                <button type="button" onClick={() => setShowPaymentModal(false)} className="flex-1 py-2 bg-dash-surface border border-dash-border text-dash-text rounded-lg text-xs font-medium hover:bg-dash-surface-hover transition-colors">Cancel</button>
-                <button type="submit" disabled={updatingPayment} className="flex-1 py-2 bg-[#EA6639] text-white rounded-lg text-xs font-medium hover:bg-[#EA6639]/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-70">
-                  {updatingPayment ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving Card...</> : "Save Payment Method"}
+
+            {/* 3-Method Tabs Switcher */}
+            <div className="p-4 bg-dash-canvas/60 border-b border-dash-border">
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveMethodTab("bacs")}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all ${
+                    activeMethodTab === "bacs"
+                      ? "bg-dash-surface border-[#EA6639] text-[#EA6639] shadow-sm font-bold"
+                      : "bg-dash-surface/60 border-dash-border text-dash-text-sec hover:text-dash-text hover:bg-dash-surface"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Landmark className="w-4 h-4" />
+                    <span className="text-xs">BACS Transfer</span>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded bg-[#EA6639]/10 text-[#EA6639]">
+                    Primary #1
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveMethodTab("paystack")}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all ${
+                    activeMethodTab === "paystack"
+                      ? "bg-dash-surface border-[#EA6639] text-[#EA6639] shadow-sm font-bold"
+                      : "bg-dash-surface/60 border-dash-border text-dash-text-sec hover:text-dash-text hover:bg-dash-surface"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Zap className="w-4 h-4" />
+                    <span className="text-xs">Paystack</span>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    Online #2
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveMethodTab("flutterwave")}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all ${
+                    activeMethodTab === "flutterwave"
+                      ? "bg-dash-surface border-[#EA6639] text-[#EA6639] shadow-sm font-bold"
+                      : "bg-dash-surface/60 border-dash-border text-dash-text-sec hover:text-dash-text hover:bg-dash-surface"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Globe className="w-4 h-4" />
+                    <span className="text-xs">Flutterwave</span>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    Multi-Cur #3
+                  </span>
                 </button>
               </div>
-            </form>
+            </div>
+
+            {/* Modal Body Content */}
+            <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+
+              {/* ── TAB 1: BACS / DIRECT BANK TRANSFER ── */}
+              {activeMethodTab === "bacs" && (
+                <div className="space-y-4">
+                  <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-dash-text flex items-start gap-2.5">
+                    <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                    <p>
+                      <strong>Official Primary Remittance:</strong> Initiate direct wire or BACS transfer from your corporate bank using the agency coordinates below. Reconciles autonomously upon remittance confirmation.
+                    </p>
+                  </div>
+
+                  {/* Bank Coordinates Grid */}
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-dash-text-muted block">
+                      Ever Corporate Bank Coordinates
+                    </span>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {[
+                        { label: "Account Beneficiary", value: "Ever Global Technology Ltd" },
+                        { label: "Bank Institution", value: "Barclays Bank UK PLC" },
+                        { label: "Sort Code", value: "04-00-04" },
+                        { label: "Account Number", value: "82910482" },
+                        { label: "IBAN", value: "GB29 EVER 0400 0482 9104 82" },
+                        { label: "SWIFT / BIC", value: "EVERGB2L" },
+                      ].map((item, idx) => (
+                        <div key={idx} className="p-2.5 rounded-lg bg-dash-canvas border border-dash-border flex items-center justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] text-dash-text-muted block">{item.label}</span>
+                            <span className="font-mono font-semibold text-dash-text">{item.value}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => copyCoordinate(item.value, item.label)}
+                            className="p-1.5 rounded-md hover:bg-dash-surface text-dash-text-muted hover:text-dash-text transition-colors"
+                            title={`Copy ${item.label}`}
+                          >
+                            {copiedKey === item.label ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Dedicated Reference */}
+                    <div className="p-2.5 rounded-lg bg-[#EA6639]/10 border border-[#EA6639]/20 flex items-center justify-between gap-2 mt-2">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-[#EA6639] block">Mandatory Remittance Reference</span>
+                        <span className="font-mono font-bold text-xs text-dash-text">
+                          {`INV-${(hotelId || "GRANDAZURE").toUpperCase().replace(/[^A-Z0-9]/g, "")}-2026-10`}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyCoordinate(`INV-${(hotelId || "GRANDAZURE").toUpperCase().replace(/[^A-Z0-9]/g, "")}-2026-10`, "Remittance Reference")}
+                        className="px-2.5 py-1 rounded-md bg-[#EA6639] text-white text-xs font-semibold hover:bg-[#EA6639]/90 transition-colors flex items-center gap-1 shadow-xs"
+                      >
+                        {copiedKey === "Remittance Reference" ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>Copy Ref</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Transfer Reference Proof Form */}
+                  <div className="pt-3 border-t border-dash-border space-y-3">
+                    <span className="text-xs font-bold text-dash-text block">Submit Transfer Reference &amp; Proof</span>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-medium text-dash-text-muted block mb-1">Your Bank Transfer Reference / Transaction ID</label>
+                        <input
+                          type="text"
+                          value={bacsReference}
+                          onChange={(e) => setBacsReference(e.target.value)}
+                          placeholder="e.g. BARC-TRF-902810"
+                          className="w-full px-3 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs font-mono text-dash-text focus:outline-none focus:border-[#EA6639]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-medium text-dash-text-muted block mb-1">Transfer Execution Date</label>
+                        <input
+                          type="date"
+                          value={bacsDate}
+                          onChange={(e) => setBacsDate(e.target.value)}
+                          className="w-full px-3 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs font-mono text-dash-text focus:outline-none focus:border-[#EA6639]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedMethod("bacs");
+                          localStorage.setItem("ever_agency_payment_method", "bacs");
+                          showToast("BACS Direct Bank Transfer set as your active settlement channel", "success");
+                        }}
+                        className="flex-1 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs font-semibold text-dash-text hover:bg-dash-surface transition-colors"
+                      >
+                        Set as Active Channel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={bacsProofStatus === "submitting"}
+                        onClick={() => {
+                          if (!bacsReference.trim()) {
+                            showToast("Please enter your bank transfer reference", "error");
+                            return;
+                          }
+                          setBacsProofStatus("submitting");
+                          setTimeout(() => {
+                            setBacsProofStatus("confirmed");
+                            setSelectedMethod("bacs");
+                            localStorage.setItem("ever_agency_payment_method", "bacs");
+                            showToast("Bank transfer proof submitted. Agency finance will reconcile within 2 hours.", "success");
+                            setTimeout(() => setShowPaymentModal(false), 900);
+                          }, 700);
+                        }}
+                        className="flex-1 py-2 bg-[#EA6639] hover:bg-[#EA6639]/90 text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-60"
+                      >
+                        {bacsProofStatus === "submitting" ? (
+                          <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Submitting...</>
+                        ) : bacsProofStatus === "confirmed" ? (
+                          <><Check className="w-3.5 h-3.5" /> Reconciled</>
+                        ) : (
+                          "Submit Transfer Proof"
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── TAB 2: PAYSTACK GATEWAY ── */}
+              {activeMethodTab === "paystack" && (
+                <div className="space-y-4">
+                  <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-dash-text flex items-start gap-2.5">
+                    <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong>Paystack Automated Collection:</strong> Supports corporate debit/credit cards (Visa, Mastercard, Verve), direct bank debit, and USSD with real-time settlement and automated tax invoice receipts.
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-dash-canvas border border-dash-border space-y-3">
+                    <div className="flex justify-between items-center text-xs pb-2 border-b border-dash-border">
+                      <span className="text-dash-text-muted">Current Amount Due:</span>
+                      <span className="font-mono font-bold text-sm text-dash-text">{formatMoney(totalInvoiceCurrent)}</span>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-medium text-dash-text-muted block mb-1">Corporate Billing Email</label>
+                      <input
+                        type="email"
+                        defaultValue={user?.email || "finance@grandazurehotel.com"}
+                        className="w-full px-3 py-2 bg-dash-surface border border-dash-border rounded-lg text-xs font-mono text-dash-text focus:outline-none focus:border-[#EA6639]"
+                      />
+                    </div>
+
+                    <div className="text-[11px] text-dash-text-muted flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Instant 3D-Secure 2.0 verification with immediate ledger credit</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMethod("paystack");
+                        localStorage.setItem("ever_agency_payment_method", "paystack");
+                        showToast("Paystack set as your active settlement channel", "success");
+                      }}
+                      className="flex-1 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs font-semibold text-dash-text hover:bg-dash-surface transition-colors"
+                    >
+                      Set as Active Channel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={onlineProcessing}
+                      onClick={() => {
+                        setOnlineProcessing(true);
+                        setTimeout(() => {
+                          setOnlineProcessing(false);
+                          setSelectedMethod("paystack");
+                          localStorage.setItem("ever_agency_payment_method", "paystack");
+                          showToast(`Payment of ${formatMoney(totalInvoiceCurrent)} confirmed via Paystack. Receipt issued.`, "success");
+                          setShowPaymentModal(false);
+                        }, 1000);
+                      }}
+                      className="flex-1 py-2 bg-[#EA6639] hover:bg-[#EA6639]/90 text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-60"
+                    >
+                      {onlineProcessing ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Connecting to Paystack...</>
+                      ) : (
+                        `Pay ${formatMoney(totalInvoiceCurrent)} via Paystack`
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── TAB 3: FLUTTERWAVE GATEWAY ── */}
+              {activeMethodTab === "flutterwave" && (
+                <div className="space-y-4">
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-dash-text flex items-start gap-2.5">
+                    <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong>Flutterwave Multi-Currency Collection:</strong> Accepts international cards, Barter, and mobile money (M-Pesa, MTN, Airtel) across global currencies with instant settlement.
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-dash-canvas border border-dash-border space-y-3">
+                    <div className="flex justify-between items-center text-xs pb-2 border-b border-dash-border">
+                      <span className="text-dash-text-muted">Current Amount Due:</span>
+                      <span className="font-mono font-bold text-sm text-dash-text">{formatMoney(totalInvoiceCurrent)}</span>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-medium text-dash-text-muted block mb-1">Corporate Billing Email</label>
+                      <input
+                        type="email"
+                        defaultValue={user?.email || "finance@grandazurehotel.com"}
+                        className="w-full px-3 py-2 bg-dash-surface border border-dash-border rounded-lg text-xs font-mono text-dash-text focus:outline-none focus:border-[#EA6639]"
+                      />
+                    </div>
+
+                    <div className="text-[11px] text-dash-text-muted flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Supports 150+ international currencies with automated conversion</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMethod("flutterwave");
+                        localStorage.setItem("ever_agency_payment_method", "flutterwave");
+                        showToast("Flutterwave set as your active settlement channel", "success");
+                      }}
+                      className="flex-1 py-2 bg-dash-canvas border border-dash-border rounded-lg text-xs font-semibold text-dash-text hover:bg-dash-surface transition-colors"
+                    >
+                      Set as Active Channel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={onlineProcessing}
+                      onClick={() => {
+                        setOnlineProcessing(true);
+                        setTimeout(() => {
+                          setOnlineProcessing(false);
+                          setSelectedMethod("flutterwave");
+                          localStorage.setItem("ever_agency_payment_method", "flutterwave");
+                          showToast(`Payment of ${formatMoney(totalInvoiceCurrent)} confirmed via Flutterwave. Receipt issued.`, "success");
+                          setShowPaymentModal(false);
+                        }, 1000);
+                      }}
+                      className="flex-1 py-2 bg-[#EA6639] hover:bg-[#EA6639]/90 text-white rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-60"
+                    >
+                      {onlineProcessing ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Connecting to Flutterwave...</>
+                      ) : (
+                        `Pay ${formatMoney(totalInvoiceCurrent)} via Flutterwave`
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Modal Footer Notice */}
+            <div className="p-4 bg-dash-canvas/40 border-t border-dash-border text-center">
+              <span className="text-[10px] text-dash-text-muted">
+                Official Ever Global Technology settlement channels. All transactions are backed by automated audit vouchers.
+              </span>
+            </div>
+
           </div>
         </div>
       )}

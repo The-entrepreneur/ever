@@ -6,6 +6,7 @@ import {
   ShieldAlert, Menu, X, HelpCircle, DollarSign, Palette, Blocks, Calendar
 } from "lucide-react";
 import { useTheme } from "../../shared/ThemeProvider";
+import { useAuth } from "../../context/AuthContext";
 
 import { AgencyDashboardTab } from "./admin-tabs/AgencyDashboardTab";
 import { ClientManagementTab } from "./admin-tabs/ClientManagementTab";
@@ -32,6 +33,7 @@ const PlaceholderTab = ({ title, description }: { title: string, description: st
 
 export function AdminConsole() {
   const { theme, setTheme } = useTheme();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"dashboard" | "clients" | "deployments" | "templates" | "billing" | "health" | "queue" | "revenue" | "compliance" | "branding" | "calendar">("dashboard");
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
@@ -423,16 +425,17 @@ export function AdminConsole() {
                 {isProfileOpen && (
                   <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-dash-surface border border-dash-border overflow-hidden z-50">
                     <div className="px-4 py-3 border-b border-dash-border-hairline bg-dash-canvas">
-                      <p className="text-body font-semibold text-dash-text truncate">Agency Admin</p>
-                      <p className="text-data text-dash-text-sec truncate">sysadmin@ever.ai</p>
+                      <p className="text-body font-semibold text-dash-text truncate">Agency Administrator</p>
+                      <p className="text-data text-dash-text-sec truncate">{user?.email || "admin@ever.ai"}</p>
                     </div>
                     <div className="border-t border-dash-border-hairline py-1">
                       <button 
-                        onClick={() => {
+                        onClick={async () => {
                           setIsProfileOpen(false);
-                          navigate("/login");
+                          await signOut();
+                          navigate("/login", { replace: true });
                         }}
-                        className="w-full text-left px-4 py-1.5 text-body text-red-600 hover:bg-red-50 flex items-center gap-2 dashboard-btn compact-touch-target"
+                        className="w-full text-left px-4 py-1.5 text-body text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 dashboard-btn compact-touch-target cursor-pointer"
                       >
                         <LogOut className="w-4 h-4" /> Log out
                       </button>

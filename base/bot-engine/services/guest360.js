@@ -36,6 +36,35 @@ function getPool() {
  */
 async function lookupGuest360(hotelId, identifier) {
   if (!hotelId || !identifier) return null;
+
+  // 1. Try Supabase REST API RPC
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://oieidnsppwooknzofzeq.supabase.co';
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (supabaseKey) {
+    try {
+      const fetch = globalThis.fetch || require('node-fetch');
+      const resp = await fetch(`${supabaseUrl}/rest/v1/rpc/lookup_guest_360`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          p_hotel_id: hotelId,
+          p_identifier: identifier
+        })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        return data || null;
+      }
+    } catch (e) {
+      console.warn('[Guest360] Supabase REST lookup fallback:', e.message);
+    }
+  }
+
+  // 2. Direct PostgreSQL fallback
   const p = getPool();
   if (!p) return null;
 
@@ -116,6 +145,40 @@ async function upsertGuestProfile(hotelId, {
   channel = null
 }) {
   if (!hotelId || !fullName) return null;
+
+  // 1. Try Supabase REST API RPC
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://oieidnsppwooknzofzeq.supabase.co';
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (supabaseKey) {
+    try {
+      const fetch = globalThis.fetch || require('node-fetch');
+      const resp = await fetch(`${supabaseUrl}/rest/v1/rpc/upsert_guest_360`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          p_hotel_id: hotelId,
+          p_full_name: fullName,
+          p_email: email,
+          p_phone: phone,
+          p_room_preference: roomPreference,
+          p_dietary_preference: dietaryPreference,
+          p_special_notes: specialNotes,
+          p_channel: channel || 'direct'
+        })
+      });
+      if (resp.ok) {
+        return await resp.json();
+      }
+    } catch (e) {
+      console.warn('[Guest360] Supabase REST upsert fallback:', e.message);
+    }
+  }
+
+  // 2. Direct PostgreSQL fallback
   const p = getPool();
   if (!p) return null;
 
