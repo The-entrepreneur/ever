@@ -5,6 +5,22 @@ All notable changes to this project, including implementations, rollbacks, audit
 ## [Unreleased]
 ### Implementations
 ### Architecture & Standardization
+- **Sprint 16: Agency Admin Control Plane Live Integration & Strict Zero-Mock Data Boundary ([`admin.ts`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/routes/admin.ts), [`HotelProvisioningTab.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/admin/admin-tabs/HotelProvisioningTab.tsx), [`DeploymentMonitorTab.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/admin/admin-tabs/DeploymentMonitorTab.tsx), [`SystemHealthTab.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/admin/admin-tabs/SystemHealthTab.tsx), [`QueueManagementTab.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/admin/admin-tabs/QueueManagementTab.tsx), [`UsageBillingTab.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/admin/admin-tabs/UsageBillingTab.tsx), [`AgencyDashboardTab.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/admin/admin-tabs/AgencyDashboardTab.tsx), [`RevenueTab.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/admin/admin-tabs/RevenueTab.tsx), [`AgencyComplianceTab.tsx`](file:///c:/Users/DERO.DEV/Documents/GitHub/ever/platform/src/app/admin/admin-tabs/AgencyComplianceTab.tsx))**:
+  - **Admin Backend API Routes (`platform/src/routes/admin.ts`)**:
+    - Created dedicated `/api/admin` router handling live deployments (`/deployments`), restart signals (`/deployments/:slug/restart`), real multi-service pings (`/health`), live message queue queries (`/queues`), queue flush (`/queues/flush`), tenant onboarding and filesystem scaffolding (`/provision`), usage analytics (`/billing`), and invoice ledger generation (`/invoices/generate`).
+  - **Zero-Mock Production Boundary Enforcement**:
+    - Purged all hardcoded mock arrays (`DEPLOYMENTS`, `ALL_LOGS`, `INITIAL_QUEUES`, `BILLING_DATA`) from live views.
+    - Wrapped all tabs with `useSandbox()`, strictly separating sandbox demo accounts from live production mode.
+    - Implemented clean, authentic zero-states for non-sandbox production users across all tabs (no fake hotels, no synthetic numbers, no simulated log traces).
+  - **Real Tenant Provisioning & Execution**:
+    - Connected `HotelProvisioningTab` to `/api/admin/provision` to execute real inserts into Supabase `public.hotels` and `public.subscriptions`, generate client `.env` files in `clients/${slug}`, and record immutable audit logs in `public.agency_audit_log`.
+  - **Live Telemetry & Diagnostics**:
+    - Replaced fake pings in `SystemHealthTab` with live round-trip network measurements to Supabase DB, Bot Engine, and OpenBSP.
+    - Replaced mock audit logs in `AgencyComplianceTab` with direct queries to `public.dpa_records`, `public.sub_processors`, `public.agency_audit_log`, and `public.breach_incidents`.
+  - **Full Platform Typecheck**:
+    - Verified complete TypeScript compilation with 0 errors (`tsc --noEmit`).
+
+
 - **Sprint 13 Architecture Alignment: Single Source of Truth & Docker Topographical Regularization**:
   - **Supabase Unified Source of Truth**: Conducted full live schema comparison against Supabase production project (`oieidnsppwooknzofzeq`). Confirmed all operational tables (`orders`, `service_requests`, `folio_charges`, `menu_items`, `rooms`, `bookings`, `guests`, `faqs`) are natively supported in Supabase and actively tied to the Hub console (`OrdersTab.tsx`, `ServicesTab.tsx`).
   - **Split-Brain Mitigation**: Eliminated redundant detached local PostgreSQL container from Docker topology, ensuring all guest in-chat requests and hotel console operations mirror in real time without data bifurcation.

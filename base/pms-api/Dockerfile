@@ -1,6 +1,10 @@
-FROM python:3.12-slim
+FROM --platform=linux/amd64 python:3.11-slim
 
 WORKDIR /app
+
+# Configure pip timeout and retry thresholds to withstand slow or unstable connections
+ENV PIP_DEFAULT_TIMEOUT=120
+ENV PIP_RETRIES=5
 
 # Install dependencies first (layer caching)
 COPY requirements.txt .

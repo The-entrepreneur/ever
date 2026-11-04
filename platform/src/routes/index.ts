@@ -8,6 +8,7 @@ import geminiRoutes from "./gemini.js";
 import templatesRoutes from "./templates.js";
 import conversationsRoutes from "./conversations.js";
 import contactRoutes from "./contact.js";
+import adminRoutes from "./admin.js";
 
 const apiRouter = Router();
 
@@ -20,5 +21,6 @@ apiRouter.use("/gemini", geminiRoutes);
 apiRouter.use("/templates", templatesRoutes);
 apiRouter.use("/conversations", conversationsRoutes);
 apiRouter.use("/contact", contactRoutes);
+apiRouter.use("/admin", adminRoutes);
 
 export default apiRouter;

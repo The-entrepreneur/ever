@@ -3,13 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, Users, Server, FileJson, CreditCard, AlertTriangle, ListTree,
   Sun, Moon, LogOut, PanelLeftClose, PanelLeftOpen, Search, Building2, ChevronDown,
-  ShieldAlert, Menu, X, HelpCircle, DollarSign, Palette, Blocks, Calendar
+  ShieldAlert, Menu, X, HelpCircle, DollarSign, Palette, Blocks, Calendar, Rocket
 } from "lucide-react";
 import { useTheme } from "../../shared/ThemeProvider";
 import { useAuth } from "../../context/AuthContext";
 
 import { AgencyDashboardTab } from "./admin-tabs/AgencyDashboardTab";
 import { ClientManagementTab } from "./admin-tabs/ClientManagementTab";
+import { HotelProvisioningTab } from "./admin-tabs/HotelProvisioningTab";
 import { DeploymentMonitorTab } from "./admin-tabs/DeploymentMonitorTab";
 import { TemplateManagerTab } from "./admin-tabs/TemplateManagerTab";
 import { UsageBillingTab } from "./admin-tabs/UsageBillingTab";
@@ -35,7 +36,7 @@ export function AdminConsole() {
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "clients" | "deployments" | "templates" | "billing" | "health" | "queue" | "revenue" | "compliance" | "branding" | "calendar">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "clients" | "provisioning" | "deployments" | "templates" | "billing" | "health" | "queue" | "revenue" | "compliance" | "branding" | "calendar">("dashboard");
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -114,6 +115,7 @@ export function AdminConsole() {
               <div className="px-3 mb-2"><span className="text-micro font-bold text-dash-text-sec uppercase tracking-wider">Infrastructure</span></div>
               <div className="space-y-2">
                 {[
+                  { tab: "provisioning", label: "Provision Hotel", icon: Rocket },
                   { tab: "deployments", label: "Deployments", icon: Server },
                   { tab: "templates", label: "Templates", icon: FileJson },
                   { tab: "calendar", label: "Host Calendar", icon: Calendar },
@@ -226,6 +228,19 @@ export function AdminConsole() {
           <div className="px-3 mb-2 mt-4">
             {isSidebarExpanded && <div className="px-3 mb-2"><span className="text-micro font-bold text-dash-text-sec uppercase tracking-wider">Infrastructure</span></div>}
             <div className="space-y-2">
+              <button 
+                onClick={() => setActiveTab("provisioning")}
+                title="Hotel Provisioning"
+                className={`w-full rounded-md flex items-center gap-3 h-[36px] px-3 py-1.5 transition-colors dashboard-btn compact-touch-target ${
+                  activeTab === "provisioning" 
+                    ? "bg-[#EA6639]/10 dark:bg-[#EA6639]/20 text-[#EA6639] font-semibold" 
+                    : "text-dash-text-sec hover:bg-dash-surface-hover hover:text-dash-text"
+                } ${!isSidebarExpanded && "justify-center"}`}
+              >
+                <Rocket className="w-5 h-5 shrink-0" />
+                {isSidebarExpanded && <span className="text-body font-medium truncate">Provision Hotel</span>}
+              </button>
+
               <button 
                 onClick={() => setActiveTab("deployments")}
                 title="Deployment Monitor"
@@ -451,7 +466,8 @@ export function AdminConsole() {
         <div className="flex-1 overflow-y-auto relative min-h-0 bg-dash-surface">
           {activeTab === "dashboard" && <AgencyDashboardTab onNavigate={setActiveTab as any} />}
           {activeTab === "clients" && <ClientManagementTab />}
-          {activeTab === "deployments" && <DeploymentMonitorTab />}
+          {activeTab === "provisioning" && <HotelProvisioningTab onNavigate={setActiveTab as any} />}
+          {activeTab === "deployments" && <DeploymentMonitorTab onNavigate={setActiveTab as any} />}
           {activeTab === "templates" && <TemplateManagerTab />}
           {activeTab === "calendar" && <CalendarSettingsTab />}
           {activeTab === "billing" && <UsageBillingTab />}

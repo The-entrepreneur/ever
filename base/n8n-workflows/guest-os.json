@@ -517,7 +517,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "hotel-chatbot",
+        "path": "guest-os",
         "responseMode": "responseNode",
         "options": {},
         "parameters": {
