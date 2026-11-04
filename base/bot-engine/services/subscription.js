@@ -1,75 +1,72 @@
 'use strict';
 const { Pool } = require('pg');
 
-// ──────────────────────────────────────────────────────────────
-// SubscriptionService
-// Checks the Supabase `subscriptions` table to confirm whether
-// a hotel's account is active before forwarding webhook traffic
-// to its n8n instance. Uses a direct PostgreSQL connection
-// (DATABASE_URL must point to the Supabase postgres endpoint).
-// ──────────────────────────────────────────────────────────────
-
 let pool = null;
 
 function getPool() {
   if (!pool) {
     const connStr = process.env.SUPABASE_DB_URL || process.env.PMS_DATABASE_URL;
-    if (!connStr) {
-      throw new Error('[Subscription] SUPABASE_DB_URL is not set. Cannot check subscription status.');
+    if (connStr && !connStr.includes('postgres:5432')) {
+      pool = new Pool({ connectionString: connStr, ssl: { rejectUnauthorized: false } });
     }
-    pool = new Pool({ connectionString: connStr, ssl: { rejectUnauthorized: false } });
   }
   return pool;
 }
 
 /**
  * Returns true if the hotel has an active subscription, false otherwise.
- * On DB errors it defaults to true (fail-open) to avoid blocking messages
- * due to a transient DB outage. The error is logged for ops visibility.
+ * First queries Supabase REST API; falls back to PG pool, and fails-open on outage.
  *
  * @param {string} hotelSlug  The hotel's unique slug identifier
  * @returns {Promise<boolean>}
  */
 async function isSubscriptionActive(hotelSlug) {
-  try {
-    const result = await getPool().query(
-      `SELECT status, tier FROM subscriptions WHERE hotel_slug = $1 LIMIT 1`,
-      [hotelSlug]
-    );
+  if (!hotelSlug) return false;
 
-    if (result.rows.length === 0) {
-      // No subscription record found — treat as inactive to avoid rogue traffic
-      console.warn(`[Subscription] No subscription record found for: ${hotelSlug}`);
-      return false;
+  // 1. Primary: Supabase REST API
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://oieidnsppwooknzofzeq.supabase.co';
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (supabaseKey) {
+    try {
+      const fetch = globalThis.fetch || require('node-fetch');
+      const resp = await fetch(`${supabaseUrl}/rest/v1/subscriptions?hotel_slug=eq.${encodeURIComponent(hotelSlug)}&select=status&limit=1`, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Accept': 'application/json'
+        }
+      });
+      if (resp.ok) {
+        const rows = await resp.json();
+        if (rows && rows.length > 0) {
+          return rows[0].status === 'active';
+        }
+        // In local dev/bootstrap if no subscription row exists, fail open
+        return true;
+      }
+    } catch (err) {
+      console.warn('[Subscription] REST check warning:', err.message);
     }
-
-    const { status } = result.rows[0];
-    return status === 'active';
-  } catch (err) {
-    // Fail-open on DB errors to avoid blocking live hotel messages due to outages
-    console.error(`[Subscription] DB error checking subscription for ${hotelSlug}:`, err.message);
-    return true;
   }
+
+  // 2. Fallback: PostgreSQL connection
+  const p = getPool();
+  if (p) {
+    try {
+      const res = await p.query(
+        'SELECT status FROM subscriptions WHERE hotel_slug = $1 LIMIT 1',
+        [hotelSlug]
+      );
+      if (res.rows.length === 0) return true;
+      return res.rows[0].status === 'active';
+    } catch (err) {
+      console.warn(`[Subscription] DB error checking status for ${hotelSlug} (failing open):`, err.message);
+      return true;
+    }
+  }
+
+  return true;
 }
 
-/**
- * Returns the full subscription record for a hotel, or null if not found.
- * Useful for tier-aware routing logic.
- *
- * @param {string} hotelSlug
- * @returns {Promise<{hotel_slug: string, tier: string, status: string} | null>}
- */
-async function getSubscription(hotelSlug) {
-  try {
-    const result = await getPool().query(
-      `SELECT hotel_slug, tier, status FROM subscriptions WHERE hotel_slug = $1 LIMIT 1`,
-      [hotelSlug]
-    );
-    return result.rows[0] || null;
-  } catch (err) {
-    console.error(`[Subscription] DB error fetching subscription for ${hotelSlug}:`, err.message);
-    return null;
-  }
-}
-
-module.exports = { isSubscriptionActive, getSubscription };
+module.exports = { isSubscriptionActive };

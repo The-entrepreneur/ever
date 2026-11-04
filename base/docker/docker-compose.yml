@@ -2,19 +2,24 @@
 # Docker Compose — EVER Guest OS
 # Runs: n8n + bot-engine + pms-api + Redis per hotel tenant
 # Data Layer: Supabase (Agency Cloud) as single source of truth
-# Usage: docker compose -f base/docker/docker-compose.yml up --build
+# Usage: HOTEL_SLUG=myhotel docker compose -f base/docker/docker-compose.yml up --build
 # ─────────────────────────────────────────────────────────────
-
-version: '3.8'
+#
+# NOTE: Docker Compose v2 does NOT allow variable interpolation in
+# top-level map *keys* (networks/volumes section keys). Variables
+# are only valid in values. Static keys are used here; the actual
+# Docker object names are set via the `name:` field.
+# ─────────────────────────────────────────────────────────────
 
 services:
 
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:stable
+    platform: linux/amd64
     container_name: n8n_${HOTEL_SLUG}
     restart: unless-stopped
     ports:
-      - '${N8N_PORT}:5678'
+      - '${N8N_PORT:-5678}:5678'
     env_file: ../.env
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
@@ -29,7 +34,7 @@ services:
       - EXECUTIONS_DATA_SAVE_ON_SUCCESS=none
       - EXECUTIONS_DATA_SAVE_ON_ERROR=all
     volumes:
-      - n8n_data_${HOTEL_SLUG}:/home/node/.n8n
+      - n8n_data:/home/node/.n8n
       - ./credentials:/home/node/credentials:ro
     depends_on:
       redis:
@@ -37,19 +42,21 @@ services:
       bot-engine:
         condition: service_started
     networks:
-      - hotel_net_${HOTEL_SLUG}
+      - hotel_net
 
   bot-engine:
     build:
       context: ../bot-engine
       dockerfile: Dockerfile
+    platform: linux/amd64
     image: hotel-bot-engine:latest
     container_name: bot_${HOTEL_SLUG}
     restart: unless-stopped
     ports:
-      - '${BOT_ENGINE_PORT}:3001'
+      - '${BOT_ENGINE_PORT:-3001}:3001'
     env_file: ../.env
     environment:
+      - HOTEL_ID=${HOTEL_ID:-00000000-0000-0000-0000-000000000001}
       - HOTEL_SLUG=${HOTEL_SLUG}
       - BOT_ENGINE_PORT=3001
       - REDIS_URL=redis://redis_${HOTEL_SLUG}:6379
@@ -65,12 +72,13 @@ services:
       pms-api:
         condition: service_healthy
     networks:
-      - hotel_net_${HOTEL_SLUG}
+      - hotel_net
 
   pms-api:
     build:
       context: ../pms-api
       dockerfile: Dockerfile
+    platform: linux/amd64
     image: hotel-pms-api:latest
     container_name: pms_${HOTEL_SLUG}
     restart: unless-stopped
@@ -90,14 +98,16 @@ services:
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
     networks:
-      - hotel_net_${HOTEL_SLUG}
+      - hotel_net
 
   redis:
     image: redis:7-alpine
+    platform: linux/amd64
     container_name: redis_${HOTEL_SLUG}
     restart: unless-stopped
     command: >
@@ -107,19 +117,22 @@ services:
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru
     volumes:
-      - redis_data_${HOTEL_SLUG}:/data
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - hotel_net_${HOTEL_SLUG}
+      - hotel_net
 
 volumes:
-  n8n_data_${HOTEL_SLUG}:
-  redis_data_${HOTEL_SLUG}:
+  n8n_data:
+    name: n8n_data_${HOTEL_SLUG}
+  redis_data:
+    name: redis_data_${HOTEL_SLUG}
 
 networks:
-  hotel_net_${HOTEL_SLUG}:
+  hotel_net:
+    name: hotel_net_${HOTEL_SLUG}
     driver: bridge

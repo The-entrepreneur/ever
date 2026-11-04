@@ -1,6 +1,10 @@
-FROM node:20-alpine
+FROM --platform=linux/amd64 node:20-slim
 
 WORKDIR /app
+
+# Configure npm timeout and retries for network resilience
+ENV NPM_CONFIG_FETCH_TIMEOUT=120000
+ENV NPM_CONFIG_FETCH_RETRIES=5
 
 # Install dependencies first (layer caching)
 COPY package*.json ./
@@ -18,6 +22,6 @@ RUN node -e "const { pipeline } = require('@xenova/transformers'); pipeline('fea
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:3001/health || exit 1
+  CMD node -e "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
 CMD ["node", "index.js"]
