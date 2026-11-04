@@ -6,8 +6,8 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const SUPABASE_URL = 'https://oieidnsppwooknzofzeq.supabase.co';
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pZWlkbnNwcHdvb2tuem9memVxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDk1NzgzMCwiZXhwIjoyMDk2NTMzODMwfQ._mWJxNhbBy7KegYi9ug2JhWMC91s3d79-3gzKf3r1sU';
+const SUPABASE_URL = '';
+const SERVICE_ROLE_KEY = '';
 
 const MIGRATION_FILE = path.join(__dirname, 'supabase', 'migrations', '013_cumulative_sprint_apply.sql');
 
